@@ -1,6 +1,3 @@
-from Vector2D import Vector2D
-
-
 class NormalEyes:
     ''' I'm a pair of eyes! '''
     def __init__(self):
@@ -12,8 +9,8 @@ class NormalEyes:
 
 class NormalFeet:
     ''' I'm a pair of feet! '''
-    def __init__(self):
-        pass
+    def __init__(self, vector_factory):
+        self._vector_factory = vector_factory.that_must_make('vector','x, y')
 
     def walk(self, speed, direction):
-        return speed, Vector2D(direction.x*speed,direction.y*speed)
+        return speed, self._vector_factory.make(direction.x*speed, direction.y*speed)

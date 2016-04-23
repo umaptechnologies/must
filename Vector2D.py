@@ -14,3 +14,6 @@ class Vector2D:
 
     def invert(self):
         return Vector2D(self.x*-1, self.y*-1)
+
+    def __str__(self):
+        return "%d,%d" % (self.x,self.y)

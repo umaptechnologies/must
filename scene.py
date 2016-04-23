@@ -1,9 +1,18 @@
 from patterns import patterns
-from Vector2D import Vector2D
+from must import new_thing
 
-conversation_starter = patterns.create(lambda thing: thing.that_must('start_conversation', '', 'words').and_must_use(location=Vector2D(1,1)))
-being = patterns.create(lambda thing: thing.that_must('respond', 'words, source', '').must_use(location=Vector2D(0,0)).and_must_have('energy'))
+being1_location = patterns.create(new_thing().that_must_use(x=1,y=1))
+being1 = patterns.create(new_thing()
+                         .that_must('start_conversation', returning='words')
+                         .and_must_use(location=being1_location))
 
-words = conversation_starter.start_conversation()
-being.respond(words, conversation_starter)
-print being.energy
+being2_location = patterns.create(new_thing().that_must_use(x=0,y=0))
+being2 = patterns.create(new_thing()
+                         .that_must('respond', 'words, source')
+                         .must_use(location=being2_location)
+                         .and_must_have('energy'))
+
+words = being1.start_conversation()
+being2.respond(words, being1)
+print being2.energy
+print being2.location
