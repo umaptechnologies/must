@@ -1,33 +1,95 @@
 import inspect
 import re
+import types
 
 
 def new_thing():
     return Requirements()
 
 
-def must_make_safe(obj):
+class SafeObject:
+    ''' Never fails a must. '''
+    def must_be_factory(self):
+        return self
+
+    def must_not_be_factory(self):
+        return self
+
+    def must(self, action, taking, returning):
+        return self
+
+    def must_have(self, *attributes):
+        return self
+
+    def must_use(self, **known_parameters):
+        return self
+
+    def must_make(self, obj_type, parameters):
+        return self
+
+    def that_must(self, action, taking='', returning=''):
+        return self.must(action, taking, returning)
+
+    def that_must_have(self, *attributes):
+        return self.must_have(*attributes)
+
+    def that_must_use(self, **known_parameters):
+        return self.must_use(**known_parameters)
+
+    def that_must_make(self, obj_type, parameters):
+        return self.must_make(obj_type, parameters)
+
+    def and_must(self, action, taking='', returning=''):
+        return self.must(action, taking, returning)
+
+    def and_must_have(self, *attributes):
+        return self.must_have(*attributes)
+
+    def and_must_use(self, **known_parameters):
+        return self.must_use(**known_parameters)
+
+    def and_must_make(self, obj_type, parameters):
+        return self.must_make(obj_type, parameters)
+
+
+def must_be_checkable(obj):
     if type(obj) in (int, bool):
         return
 
-    def identity(*x, **y):
+    obj.is_factory = False
+
+    def this_must(action, taking, returning):
+        # TODO: Assert!
         return obj
 
-    obj.must = identity
-    obj.must_have = identity
-    obj.must_use = identity
-    obj.that_must = identity
-    obj.that_must_have = identity
-    obj.that_must_use = identity
-    obj.and_must = identity
-    obj.and_must_have = identity
-    obj.and_must_use = identity
+    def this_must_have(*attributes):
+        for a in attributes:
+            assert hasattr(obj, a), str(obj)+" doesn't have "+a+"!"
+        return obj
+
+    obj.must = this_must
+    obj.must_have = this_must_have
+    obj.that_must = this_must
+    obj.that_must_have = this_must_have
+    obj.and_must = this_must
+    obj.and_must_have = this_must_have
+    return obj
+
+
+def must_list_objects(possible_list):
+    if not isinstance(possible_list, list):
+        print "Warning: %s must be a list!" % str(possible_list)
+    elif len(possible_list) > 0:
+        return must_be_checkable(possible_list[0])
+    else:
+        return SafeObject()
 
 
 class SafeFactory:
     ''' WRITEME '''
     def __init__(self, obj_constructor):
         self._obj_constructor = obj_constructor
+        self.is_factory = True
 
     def make(self, *args):
         return self._obj_constructor(*args)
@@ -167,11 +229,11 @@ class ClassPattern:
         for arg_name in self._dependencies:
             if arg_name in known_parameters:
                 params[arg_name] = known_parameters[arg_name]
-                must_make_safe(params[arg_name])
+                must_be_checkable(params[arg_name])
             else:
                 params[arg_name] = universe.create_with_namehint(str(self)+': "'+arg_name+'"', self._dependencies[arg_name])
         result = self._constructor(**params)
-        must_make_safe(result)
+        must_be_checkable(result)
         return result
 
     def matches(self, requirements):
@@ -213,7 +275,13 @@ class MustHavePatterns:
         return possibilities[0].create(self, requirements.known_parameters)
 
     def create(self, requirements):
-        return self.create_with_namehint('Object created from specification', requirements)
+        if isinstance(requirements, Requirements):
+            return self.create_with_namehint('Object created from specification', requirements)
+        elif isinstance(requirements, (types.TypeType, types.ClassType)):
+            for p in self._patterns:
+                if p._constructor == requirements:
+                    return p.create(self, {})
+        raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
     def _write_error(self, name_hint, requirements_string, num_possibilities):
         # print "Patterns:"
