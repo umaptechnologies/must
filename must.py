@@ -174,10 +174,16 @@ class ClassPattern:
 
     def can(self, action, taking, returning):
         if action in self._capabilities:
-            try:
-                return taking in self._capabilities[action]   # TODO:Include 'returning'
-            except:
-                return taking == self._capabilities[action]   # TODO:Include 'returning'
+            numberOfArgsTaken = 0 if len(taking) is 0 else taking.count(',')+1  # TODO: This is bad and should feel bad.
+            if str(type(self._capabilities[action])) == "<type 'str'>":  # TODO: This check isn't particularly elegant either.
+                numberOfArgsProvided = 0 if len(self._capabilities[action]) is 0 else self._capabilities[action].count(',')+1
+                return numberOfArgsTaken == numberOfArgsProvided  # TODO:Include 'returning'
+            else:
+                for x in self._capabilities[action]:
+                    numberOfArgsProvided = 0 if len(x) is 0 else x.count(',')+1
+                    if numberOfArgsTaken == numberOfArgsProvided:  # TODO: But seriously, we're just discarding the names?
+                        return True  # TODO:Include 'returning'
+
         return False
 
     def takes(self, parameter):
