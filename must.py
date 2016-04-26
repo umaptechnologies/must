@@ -1,10 +1,6 @@
 import inspect
-import re
 import types
-
-
-def new_thing():
-    return Requirements()
+from plastic import Plastic
 
 
 class SafeObject:
@@ -15,7 +11,7 @@ class SafeObject:
     def must_not_be_factory(self):
         return self
 
-    def must(self, action, taking, returning):
+    def must(self, action, taking='', returning=''):
         return self
 
     def must_have(self, *attributes):
@@ -58,21 +54,21 @@ def must_be_checkable(obj):
 
     obj.is_factory = False
 
-    def this_must(action, taking, returning):
+    def this_must(self, action, taking='', returning=''):
         # TODO: Assert!
         return obj
 
-    def this_must_have(*attributes):
+    def this_must_have(self, *attributes):
         for a in attributes:
             assert hasattr(obj, a), str(obj)+" doesn't have "+a+"!"
         return obj
 
-    obj.must = this_must
-    obj.must_have = this_must_have
-    obj.that_must = this_must
-    obj.that_must_have = this_must_have
-    obj.and_must = this_must
-    obj.and_must_have = this_must_have
+    obj.must = types.MethodType(this_must, obj)
+    obj.must_have = types.MethodType(this_must_have, obj)
+    obj.that_must = types.MethodType(this_must, obj)
+    obj.that_must_have = types.MethodType(this_must_have, obj)
+    obj.and_must = types.MethodType(this_must, obj)
+    obj.and_must_have = types.MethodType(this_must_have, obj)
     return obj
 
 
@@ -104,85 +100,6 @@ class SafeFactory:
         return self.must_make(obj_type, parameters)
 
 
-class Requirements:
-    ''' WRITEME '''
-    def __init__(self):
-        self.is_factory = None  # This becomes True or False as soon as a requirement is specified
-        self.properties = []
-        self.capabilities = {}
-        self.parameters = []
-        self.known_parameters = {}
-
-    def must_be_factory(self):
-        assert self.is_factory is not False
-        self.is_factory = True
-
-    def must_not_be_factory(self):
-        assert self.is_factory is not True
-        self.is_factory = False
-
-    def must(self, action, taking, returning):
-        self.must_not_be_factory()
-        self.capabilities[action] = [taking,returning]
-        return self
-
-    def must_have(self, *attributes):
-        self.must_not_be_factory()
-        self.properties.extend(attributes)
-        return self
-
-    def must_use(self, **known_parameters):
-        self.must_not_be_factory()
-        self.known_parameters.update(known_parameters)
-        return self
-
-    def must_make(self, obj_type, parameters):
-        self.must_be_factory()
-        self.parameters = re.split('\s*,\s*',parameters)
-        return self
-
-    def that_must(self, action, taking='', returning=''):
-        return self.must(action, taking, returning)
-
-    def that_must_have(self, *attributes):
-        return self.must_have(*attributes)
-
-    def that_must_use(self, **known_parameters):
-        return self.must_use(**known_parameters)
-
-    def that_must_make(self, obj_type, parameters):
-        return self.must_make(obj_type, parameters)
-
-    def and_must(self, action, taking='', returning=''):
-        return self.must(action, taking, returning)
-
-    def and_must_have(self, *attributes):
-        return self.must_have(*attributes)
-
-    def and_must_use(self, **known_parameters):
-        return self.must_use(**known_parameters)
-
-    def and_must_make(self, obj_type, parameters):
-        return self.must_make(obj_type, parameters)
-
-    def __str__(self):
-        result = 'must'
-        if self.is_factory:
-            result += " be factory ("+', '.join(self.parameters)+")"
-        else:
-            if len(self.properties) > 0:
-                result += " have "+', '.join(self.properties)
-            if len(self.capabilities) > 0:
-                result += ("," if len(self.known_parameters) > 0 else " and") if result != 'must' else ""
-                result += " be able to "+', '.join(self.capabilities.keys())
-            if len(self.known_parameters) > 0:
-                result += " and" if result != 'must' else ""
-                result += " be created with "+', '.join(self.known_parameters.keys())
-            if result == 'must':  # If the requirement has no properties, capabilities, or known parameters
-                return 'could be anything'
-        return result
-
-
 class FactoryPattern:
     ''' WRITEME '''
     def __init__(self, constructor):
@@ -212,17 +129,25 @@ class ClassPattern:
     def __init__(self, constructor):
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
-        self._dependencies = dict(zip(self._constructor_args,[Requirements() for x in self._constructor_args]))
-        obj = constructor(**self._dependencies)
+        self._dependencies = dict(zip(self._constructor_args,[Plastic() for x in self._constructor_args]))
+        obj = constructor(**self._dependencies)  # TODO: THIS BLOWS UP!
         self._properties = []
         self._capabilities = {}
         members = filter(lambda x: not x[0].startswith('_'), inspect.getmembers(obj))
         for m in members:
-            if callable(m[1]):
-                args = inspect.getargspec(m[1]).args[1:]
-                self._capabilities[m[0]] = ', '.join(args)  # TODO:Include 'returning'
+            m_name, m_val = m
+            if callable(m_val):
+                args,x,y,defaults = inspect.getargspec(m_val)
+                args = args[1:]  # Shave off 'self'
+                try:
+                    len(defaults)  # Throws an exception if the defaults are None
+                    joins = [', '.join(args[:-(cut+1)]) for cut in range(len(defaults))]
+                    joins.append(', '.join(args))
+                    self._capabilities[m_name] = tuple(joins)  # TODO:Include 'returning'
+                except:
+                    self._capabilities[m_name] = ', '.join(args)  # TODO:Include 'returning'
             else:
-                self._properties.append(m[0])
+                self._properties.append(m_name)
 
     def create(self, universe, known_parameters):
         params = {}
@@ -248,7 +173,12 @@ class ClassPattern:
         return all([x in self._properties for x in attributes])
 
     def can(self, action, taking, returning):
-        return action in self._capabilities and self._capabilities[action] == taking  # TODO:Include 'returning'
+        if action in self._capabilities:
+            try:
+                return taking in self._capabilities[action]   # TODO:Include 'returning'
+            except:
+                return taking == self._capabilities[action]   # TODO:Include 'returning'
+        return False
 
     def takes(self, parameter):
         return parameter in self._dependencies
@@ -266,8 +196,17 @@ class ClassPattern:
 class MustHavePatterns:
     ''' Nothing to see here... '''
     def __init__(self, *constructors):
-        self._patterns = map(ClassPattern, constructors)
-        self._patterns.extend(map(FactoryPattern, constructors))
+        self._patterns = []
+        for c in constructors:
+            if hasattr(c, '__call__'):
+                class Wrapper:
+                    def __init__(self):
+                        pass
+                setattr(Wrapper, c.__name__, c)
+                self._patterns.append(ClassPattern(Wrapper))
+            else:
+                self._patterns.append(ClassPattern(c))
+                self._patterns.append(FactoryPattern(c))
 
     def create_with_namehint(self, name_hint, requirements):
         possibilities = filter(lambda x: x.matches(requirements), self._patterns)
@@ -275,7 +214,7 @@ class MustHavePatterns:
         return possibilities[0].create(self, requirements.known_parameters)
 
     def create(self, requirements):
-        if isinstance(requirements, Requirements):
+        if isinstance(requirements, Plastic):
             return self.create_with_namehint('Object created from specification', requirements)
         elif isinstance(requirements, (types.TypeType, types.ClassType)):
             for p in self._patterns:

@@ -20,10 +20,6 @@ class TestDayBreaker:
         results = day_breaker.break_by_day(to_break, day_transitions)
         result_times = map(lambda a:[b.time for b in a], results)
 
-        day_transition_times = map(lambda a:a.time, day_transitions)
-        print day_transition_times
-        print result_times
-
         assert result_times[0] == []
         assert result_times[1] == [0.1, 0.2, 1]
         assert result_times[2] == [1.2]
