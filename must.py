@@ -1,5 +1,6 @@
 import inspect
 import types
+from mock import MagicMock
 from plastic import Plastic
 
 
@@ -129,8 +130,9 @@ class ClassPattern:
     def __init__(self, constructor):
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
-        self._dependencies = dict(zip(self._constructor_args,[Plastic() for x in self._constructor_args]))
-        obj = constructor(**self._dependencies)  # TODO: THIS BLOWS UP!
+        self._ordered_dependencies = [Plastic() for x in self._constructor_args]
+        self._dependencies = dict(zip(self._constructor_args,self._ordered_dependencies))
+        obj = constructor(**self._dependencies)  # TODO: THIS BLOWS UP! WATCH FOR EXPLOSIONS!
         self._properties = []
         self._capabilities = {}
         members = filter(lambda x: not x[0].startswith('_'), inspect.getmembers(obj))
@@ -148,6 +150,18 @@ class ClassPattern:
                     self._capabilities[m_name] = ', '.join(args)  # TODO:Include 'returning'
             else:
                 self._properties.append(m_name)
+
+    def describe(self, member_name):
+        if member_name == "__init__":
+            arg_headers = [x[0]+' that '+str(x[1]) for x in self._dependencies.items()]
+            return member_name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+str(self._constructor)
+        raise NotImplementedError  # TODO
+
+    def mock_dependencies(self, method_name):
+        if method_name == "__init__":
+            mocks = map(lambda x: MagicMock(spec=[m[0] for m in inspect.getmembers(x)]), self._ordered_dependencies)
+            return mocks
+        raise NotImplementedError  # TODO
 
     def create(self, universe, known_parameters):
         params = {}
@@ -216,7 +230,7 @@ class MustHavePatterns:
 
     def create_with_namehint(self, name_hint, requirements):
         possibilities = filter(lambda x: x.matches(requirements), self._patterns)
-        assert len(possibilities) is 1, self._write_error(name_hint, str(requirements), len(possibilities))
+        assert len(possibilities) is 1, self._get_error_msg(name_hint, str(requirements), len(possibilities))
         return possibilities[0].create(self, requirements.known_parameters)
 
     def create(self, requirements):
@@ -228,7 +242,14 @@ class MustHavePatterns:
                     return p.create(self, {})
         raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
-    def _write_error(self, name_hint, requirements_string, num_possibilities):
+    def mock_dependencies(self, desired_pattern, function_name):
+        if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
+            for p in self._patterns:
+                if p._constructor == desired_pattern:
+                    return p.mock_dependencies(function_name)
+        raise Exception("Unable to mock dependencies for %s.%s" % (str(desired_pattern), function_name))
+
+    def _get_error_msg(self, name_hint, requirements_string, num_possibilities):
         # print "Patterns:"
         # for x in self._patterns:
         #    print '\t'+str(x)

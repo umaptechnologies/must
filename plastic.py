@@ -19,11 +19,11 @@ class Plastic:
         self.known_parameters = {}
 
     def must_be_factory(self):
-        assert self.is_factory is not False
+        assert self.is_factory is not False, "Thing that "+str(self)+" isn't a factory, but it must be!"
         self.is_factory = True
 
     def must_not_be_factory(self):
-        assert self.is_factory is not True
+        assert self.is_factory is not True, "Thing that "+str(self)+" is a factory, but it mustn't be!"
         self.is_factory = False
 
     def must(self, action, taking='', returning=''):
