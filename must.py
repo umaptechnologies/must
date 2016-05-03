@@ -4,6 +4,23 @@ from mock import MagicMock
 from plastic import Plastic
 
 
+def _mock_must_return_itself_for_must_calls(mock):
+    mock.must_be_factory.return_value = mock
+    mock.must_not_be_factory.return_value = mock
+    mock.must.return_value = mock
+    mock.must_have.return_value = mock
+    mock.must_use.return_value = mock
+    mock.must_make.return_value = mock
+    mock.that_must.return_value = mock
+    mock.that_must_have.return_value = mock
+    mock.that_must_use.return_value = mock
+    mock.that_must_make.return_value = mock
+    mock.and_must.return_value = mock
+    mock.and_must_have.return_value = mock
+    mock.and_must_use.return_value = mock
+    mock.and_must_make.return_value = mock
+
+
 class SafeObject:
     ''' Never fails a must. '''
     def must_be_factory(self):
@@ -160,6 +177,7 @@ class ClassPattern:
     def mock_dependencies(self, method_name):
         if method_name == "__init__":
             mocks = map(lambda x: MagicMock(spec=[m[0] for m in inspect.getmembers(x)]), self._ordered_dependencies)
+            map(_mock_must_return_itself_for_must_calls, mocks)
             return mocks
         raise NotImplementedError  # TODO
 

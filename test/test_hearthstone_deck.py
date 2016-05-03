@@ -1,42 +1,30 @@
 from must import MustHavePatterns
 from hearthstone_deck import HearthstoneDeck
-import random
-
-
-class MockDecklist:
-    def __init__(self):
-        pass
-
-    def get_list(self):
-        return ["Hunter's Mark", "Unleash The Hounds", "Acidmaw"]
-
-
-class MockFatigue:
-    def __init__(self, fatigue_counter):
-        self.fatigue_counter = fatigue_counter
+from mock import call
 
 
 class TestHearthsoneDeck:
     @classmethod
     def setup_class(cls):
-        cls.test_patterns = MustHavePatterns(HearthstoneDeck, MockDecklist, MockFatigue, random.shuffle)
+        cls.test_patterns = MustHavePatterns(HearthstoneDeck)
 
     def test_deck_is_shuffled(self):
         mock_decklist, mock_shuffler, mock_fatigue_factory = self.test_patterns.mock_dependencies(HearthstoneDeck, '__init__')
+        decklist = ["Acidmaw","Hunter's Mark","Lepper Gnome"]
+        mock_decklist.get_list.return_value = list(decklist)
 
         HearthstoneDeck(mock_decklist, mock_shuffler, mock_fatigue_factory)
 
-        mock_shuffler.shuffle.assert_called_once_with([])
+        mock_shuffler.shuffle.assert_called_once_with(decklist)
 
     def test_get_increasing_fatigue(self):
-        deck = self.test_patterns.create(HearthstoneDeck)
+        mock_decklist, mock_shuffler, mock_fatigue_factory = self.test_patterns.mock_dependencies(HearthstoneDeck, '__init__')
+        decklist = ["Acidmaw","Hunter's Mark","Lepper Gnome"]
+        mock_decklist.get_list.return_value = list(decklist)
+        deck = HearthstoneDeck(mock_decklist, mock_shuffler, mock_fatigue_factory)
 
-        for i in range(3):
+        for i in range(len(decklist)+2):
             deck.draw_card()
-        fatigue1 = deck.draw_card()
-        fatigue2 = deck.draw_card()
 
-        assert isinstance(fatigue1, MockFatigue)
-        assert fatigue1.fatigue_counter == 1
-        assert isinstance(fatigue2, MockFatigue)
-        assert fatigue2.fatigue_counter == 2
+        assert mock_fatigue_factory.make.call_count is 2
+        mock_fatigue_factory.make.assert_has_calls([call(1), call(2)])

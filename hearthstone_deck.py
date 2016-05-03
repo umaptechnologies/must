@@ -13,5 +13,6 @@ class HearthstoneDeck:
         try:
             return self._cards.pop()
         except IndexError:
+            print self.fatigue_factory
             self.fatigue += 1
             return self.fatigue_factory.make(self.fatigue)

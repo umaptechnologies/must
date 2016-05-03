@@ -45,6 +45,7 @@ class Plastic:
     def must_make(self, obj_type, parameters):
         self.must_be_factory()
         self.parameters = re.split('\s*,\s*',parameters)
+        setattr(self, 'make', types.MethodType(build_best_guess(parameters, obj_type), self))
         return self
 
     def that_must(self, action, taking='', returning=''):
