@@ -90,6 +90,15 @@ def must_be_checkable(obj):
     return obj
 
 
+def must_handle_synonyms(obj, synonym_dict):
+    for member in inspect.getmembers(obj):
+        m_name, m_val = member
+        if callable(m_val) and not m_name.startswith('_') and m_name in synonym_dict:
+            for alias in synonym_dict[m_name]:
+                if not hasattr(obj, alias):
+                    setattr(obj, alias, m_val)
+
+
 def must_list_objects(possible_list):
     if not isinstance(possible_list, list):
         print "Warning: %s must be a list!" % str(possible_list)
@@ -124,10 +133,10 @@ class FactoryPattern:
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
 
-    def create(self, universe, known_parameters):
+    def create(self, universe, aliases, known_parameters):
         return SafeFactory(self._constructor)
 
-    def matches(self, requirements):
+    def matches(self, requirements, aliases):
         is_factory = requirements.is_factory
         has_parameters = self.has_parameters(requirements.parameters)
         return is_factory and has_parameters
@@ -181,7 +190,7 @@ class ClassPattern:
             return mocks
         raise NotImplementedError  # TODO
 
-    def create(self, universe, known_parameters):
+    def create(self, universe, aliases, known_parameters):
         params = {}
         for arg_name in self._dependencies:
             if arg_name in known_parameters:
@@ -190,21 +199,38 @@ class ClassPattern:
             else:
                 params[arg_name] = universe.create_with_namehint(str(self)+': "'+arg_name+'"', self._dependencies[arg_name])
         result = self._constructor(**params)
+        must_handle_synonyms(result, aliases)
         must_be_checkable(result)
         return result
 
-    def matches(self, requirements):
+    def matches(self, requirements, aliases):
         isnt_factory = not requirements.is_factory
         has_properties = self.has(requirements.properties)
-        c = requirements.capabilities
-        has_capabilities = all([self.can(a,c[a][0],c[a][1]) for a in c])
-        takes_parameters = all([self.takes(x) for x in requirements.known_parameters.keys()])
-        return isnt_factory and has_properties and has_capabilities and takes_parameters
+        takes_parameters = self.takes(requirements.known_parameters.keys())
+        has_capabilities = self.can(requirements.capabilities, aliases)
+        return isnt_factory and has_properties and takes_parameters and has_capabilities
 
     def has(self, attributes):
         return all([x in self._properties for x in attributes])
 
-    def can(self, action, taking, returning):
+    def takes(self, parameters):
+        return all([p in self._dependencies for p in parameters])
+
+    def can(self, target_capabilities, aliases):
+        for target_capability in target_capabilities.items():
+            action = target_capability[0]
+            taking = target_capability[1][0]
+            returning = target_capability[1][1]
+            if action in aliases:
+                possible_actions = aliases[action]
+                if not any([self.can_do_action(a,taking,returning) for a in possible_actions]):
+                    return False
+            else:
+                if not self.can_do_action(action, taking, returning):
+                    return False
+        return True
+
+    def can_do_action(self, action, taking, returning):
         if action in self._capabilities:
             numberOfArgsTaken = 0 if len(taking) is 0 else taking.count(',')+1  # TODO: This is bad and should feel bad.
             if str(type(self._capabilities[action])) == "<type 'str'>":  # TODO: This check isn't particularly elegant either.
@@ -215,11 +241,7 @@ class ClassPattern:
                     numberOfArgsProvided = 0 if len(x) is 0 else x.count(',')+1
                     if numberOfArgsTaken == numberOfArgsProvided:  # TODO: But seriously, we're just discarding the names?
                         return True  # TODO:Include 'returning'
-
         return False
-
-    def takes(self, parameter):
-        return parameter in self._dependencies
 
     def __str__(self):
         result = str(self._constructor)
@@ -234,22 +256,23 @@ class ClassPattern:
 class MustHavePatterns:
     ''' Nothing to see here... '''
     def __init__(self, *constructors):
+        self._aliases = {}
         self._patterns = []
         for c in constructors:
             if hasattr(c, '__call__'):
-                class Wrapper:
+                class MustWrap:
                     def __init__(self):
                         pass
-                setattr(Wrapper, c.__name__, c)
-                self._patterns.append(ClassPattern(Wrapper))
+                setattr(MustWrap, c.__name__, c)
+                self._patterns.append(ClassPattern(MustWrap))
             else:
                 self._patterns.append(ClassPattern(c))
                 self._patterns.append(FactoryPattern(c))
 
     def create_with_namehint(self, name_hint, requirements):
-        possibilities = filter(lambda x: x.matches(requirements), self._patterns)
+        possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
         assert len(possibilities) is 1, self._get_error_msg(name_hint, str(requirements), len(possibilities))
-        return possibilities[0].create(self, requirements.known_parameters)
+        return possibilities[0].create(self, self._aliases, requirements.known_parameters)
 
     def create(self, requirements):
         if isinstance(requirements, Plastic):
@@ -257,7 +280,7 @@ class MustHavePatterns:
         elif isinstance(requirements, (types.TypeType, types.ClassType)):
             for p in self._patterns:
                 if p._constructor == requirements:
-                    return p.create(self, {})
+                    return p.create(self, self._aliases, {})
         raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
     def mock_dependencies(self, desired_pattern, function_name):
@@ -266,6 +289,25 @@ class MustHavePatterns:
                 if p._constructor == desired_pattern:
                     return p.mock_dependencies(function_name)
         raise Exception("Unable to mock dependencies for %s.%s" % (str(desired_pattern), function_name))
+
+    def alias(self, **aliases):
+        for item in aliases.items():
+            if item[0] in self._aliases:
+                pool = self._aliases[item[0]]
+                # Assume item[0] is in the pool
+                if not item[1] in pool:
+                    pool.append(item[1])
+                    self._aliases[item[1]] = pool
+            elif item[1] in self._aliases:
+                pool = self._aliases[item[1]]
+                # Assume item[1] is in the pool
+                if not item[0] in pool:
+                    pool.append(item[0])
+                    self._aliases[item[0]] = pool
+            else:
+                new_synonym_pool = list(item)
+                self._aliases[item[0]] = new_synonym_pool
+                self._aliases[item[1]] = new_synonym_pool
 
     def _get_error_msg(self, name_hint, requirements_string, num_possibilities):
         # print "Patterns:"
