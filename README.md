@@ -111,3 +111,5 @@ Must is good at figuring out what to plug into where, but sometimes there's too 
 ashigaru = patterns.create(Ashigaru, with_enemy="Cousin Steve")
 ashigaru.follow_orders("attack")
 ```
+
+`Singing Spear says: "I don't want to hit Cousin Steve! I'm a pacifist!"`
