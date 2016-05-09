@@ -21,6 +21,15 @@ def _mock_must_return_itself_for_must_calls(mock):
     mock.and_must_make.return_value = mock
 
 
+class MustOutputToStdOut:
+    ''' Wrapper for the "print" statement. '''
+    def __init__(self):
+        pass
+
+    def output(self, text):
+        print text
+
+
 class SafeObject:
     ''' Never fails a must. '''
     def must_be_factory(self):
@@ -67,7 +76,7 @@ class SafeObject:
 
 
 def must_be_checkable(obj):
-    if type(obj) in (int, bool):
+    if type(obj) in (int, bool, str):
         return
 
     obj.is_factory = False
@@ -106,6 +115,13 @@ def must_list_objects(possible_list):
         return must_be_checkable(possible_list[0])
     else:
         return SafeObject()
+
+
+def must_be_string(possible_string):
+    if not isinstance(possible_string, str):
+        print "Warning: %s must be a string!" % str(possible_string)
+    else:
+        return possible_string
 
 
 class SafeFactory:
@@ -197,7 +213,8 @@ class ClassPattern:
                 params[arg_name] = known_parameters[arg_name]
                 must_be_checkable(params[arg_name])
             else:
-                params[arg_name] = universe.create_with_namehint(str(self)+': "'+arg_name+'"', self._dependencies[arg_name])
+                namehint = str(self._constructor)+' needs '+('an' if arg_name[0] in 'aeiou' else 'a')+' "'+arg_name+'" that'
+                params[arg_name] = universe.create_with_namehint(namehint, self._dependencies[arg_name])
         result = self._constructor(**params)
         must_handle_synonyms(result, aliases)
         must_be_checkable(result)
@@ -274,13 +291,21 @@ class MustHavePatterns:
         assert len(possibilities) is 1, self._get_error_msg(name_hint, str(requirements), len(possibilities))
         return possibilities[0].create(self, self._aliases, requirements.known_parameters)
 
-    def create(self, requirements):
+    def create(self, requirements, **kwargs):
+        known_parameters = {}
+        for key in kwargs.keys():
+            if key.startswith('with_'):
+                known_parameters[key[5:]] = kwargs.get(key)
+            else:
+                raise KeyError('Unknown creation parameter "%s"' % key)
+
         if isinstance(requirements, Plastic):
+            # TODO: Meld known_parameters into requirements
             return self.create_with_namehint('Object created from specification', requirements)
         elif isinstance(requirements, (types.TypeType, types.ClassType)):
             for p in self._patterns:
                 if p._constructor == requirements:
-                    return p.create(self, self._aliases, {})
+                    return p.create(self, self._aliases, known_parameters)
         raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
     def mock_dependencies(self, desired_pattern, function_name):
