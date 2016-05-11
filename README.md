@@ -40,7 +40,7 @@ Aliasing is a standard part of the Must encapsulation paradigm: modules should f
 
 ## The Simple Warrior
 
-WarriorBody are the Bodies of Simple Warriors. Why? Because they hold weapons, and can attack or retreat.
+WarriorBodies are the Bodies of Simple Warriors. Why? Because they hold weapons, and can attack or retreat.
 
 ```python
 class WarriorBody:
@@ -113,3 +113,22 @@ ashigaru.follow_orders("attack")
 ```
 
 `Singing Spear says: "I don't want to hit Cousin Steve! I'm a pacifist!"`
+
+## The Coordinated Army
+
+Legions are Coordinated Armies. Why? Because they have a Warlord and some Warriors that wage war together.
+
+```python
+class Legion:
+    def __init__(self, warlord, warrior_factory, warrior_count, enemy):
+        self.warlord = warlord.that_must('give_orders')
+        warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')
+        warrior_count = must_be_natural_number(warrior_count)
+
+        self.warriors = [warrior_factory.make(enemy) for i in range(warrior_count)]
+
+    def wage_war(self):
+        orders = self.warlord.give_orders()
+        for warrior in self.warriors:
+            warrior.follow_orders(orders)
+```

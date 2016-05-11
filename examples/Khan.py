@@ -1,5 +1,6 @@
 from must import MustHavePatterns
 from must import must_be_string
+from must import must_be_natural_number
 from must import MustOutputToStdOut
 import random
 
@@ -45,7 +46,21 @@ class SingingSpear:
         self.output_stream.output('Singing Spear says: "I don\'t want to hit %s! I\'m a pacifist!"' % str(target))
 
 
-patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, random.randint, MustOutputToStdOut)
+class Legion:
+    def __init__(self, warlord, warrior_factory, warrior_count, enemy):
+        self.warlord = warlord.that_must('give_orders')
+        warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')
+        warrior_count = must_be_natural_number(warrior_count)
+
+        self.warriors = [warrior_factory.make(enemy) for i in range(warrior_count)]
+
+    def wage_war(self):
+        orders = self.warlord.give_orders()
+        for warrior in self.warriors:
+            warrior.follow_orders(orders)
+
+
+patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
 patterns.alias(get_random_integer="randint")
 ashigaru = patterns.create(Ashigaru, with_enemy="Cousin Steve")
 ashigaru.follow_orders("attack")

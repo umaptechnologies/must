@@ -5,8 +5,8 @@ from plastic import Plastic
 
 
 def _mock_must_return_itself_for_must_calls(mock):
-    mock.must_be_factory.return_value = mock
-    mock.must_not_be_factory.return_value = mock
+    mock.must_be_type.return_value = mock
+    mock.must_be_primitive = mock
     mock.must.return_value = mock
     mock.must_have.return_value = mock
     mock.must_use.return_value = mock
@@ -109,19 +109,31 @@ def must_handle_synonyms(obj, synonym_dict):
 
 
 def must_list_objects(possible_list):
-    if not isinstance(possible_list, list):
-        print "Warning: %s must be a list!" % str(possible_list)
-    elif len(possible_list) > 0:
+    if isinstance(possible_list, Plastic):
+        possible_list.must_be_primitive('list')
+        return Plastic(parent=possible_list)
+    assert isinstance(possible_list, list), "%s must be a list!" % str(possible_list)
+    if len(possible_list) > 0:
         return must_be_checkable(possible_list[0])
     else:
         return SafeObject()
 
 
-def must_be_string(possible_string):
-    if not isinstance(possible_string, str):
-        print "Warning: %s must be a string!" % str(possible_string)
-    else:
-        return possible_string
+def must_be_string(possible_string, example=""):
+    if isinstance(possible_string, Plastic):
+        possible_string.must_be_primitive('string')
+        return example
+    assert isinstance(possible_string, str), "%s must be a string!" % str(possible_string)
+    return possible_string
+
+
+def must_be_natural_number(possible_natural_number, example=0):
+    if isinstance(possible_natural_number, Plastic):
+        possible_natural_number.must_be_primitive('natural number')
+        return example
+    assert isinstance(possible_natural_number, int), "%s must be an integer (because it's supposed to be a natural number)!" % str(possible_natural_number)
+    assert possible_natural_number < 0, "%s must be non-negative (because it's supposed to be a natural number)!" % str(possible_natural_number)
+    return possible_natural_number
 
 
 class SafeFactory:
@@ -134,7 +146,7 @@ class SafeFactory:
         return self._obj_constructor(*args)
 
     def must_make(self, obj_type, parameters):
-        return self
+        return SafeObject()
 
     def that_must_make(self, obj_type, parameters):
         return self.must_make(obj_type, parameters)
@@ -153,7 +165,7 @@ class FactoryPattern:
         return SafeFactory(self._constructor)
 
     def matches(self, requirements, aliases):
-        is_factory = requirements.is_factory
+        is_factory = requirements.type == 'factory'
         has_parameters = self.has_parameters(requirements.parameters)
         return is_factory and has_parameters
 
@@ -174,7 +186,7 @@ class ClassPattern:
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
         self._ordered_dependencies = [Plastic() for x in self._constructor_args]
         self._dependencies = dict(zip(self._constructor_args,self._ordered_dependencies))
-        obj = constructor(**self._dependencies)  # TODO: THIS BLOWS UP! WATCH FOR EXPLOSIONS!
+        obj = constructor(**self._dependencies)  # WARNING: This blows up if the user doesn't must their stuff correctly. TODO: Provide better user notification.
         self._properties = []
         self._capabilities = {}
         members = filter(lambda x: not x[0].startswith('_'), inspect.getmembers(obj))
@@ -221,11 +233,11 @@ class ClassPattern:
         return result
 
     def matches(self, requirements, aliases):
-        isnt_factory = not requirements.is_factory
+        right_type = requirements.type == 'object'
         has_properties = self.has(requirements.properties)
         takes_parameters = self.takes(requirements.known_parameters.keys())
         has_capabilities = self.can(requirements.capabilities, aliases)
-        return isnt_factory and has_properties and takes_parameters and has_capabilities
+        return right_type and has_properties and takes_parameters and has_capabilities
 
     def has(self, attributes):
         return all([x in self._properties for x in attributes])

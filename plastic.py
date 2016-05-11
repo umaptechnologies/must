@@ -12,41 +12,47 @@ def build_best_guess(taking, returning):
 class Plastic:
     ''' WRITEME '''
     def __init__(self):
-        self.is_factory = None  # This becomes True or False as soon as a requirement is specified
+        self.type = None  # This becomes a string as soon as a requirement is specified
         self.properties = []
         self.capabilities = {}
         self.parameters = []
         self.known_parameters = {}
 
-    def must_be_factory(self):
-        assert self.is_factory is not False, "Thing that "+str(self)+" isn't a factory, but it must be!"
-        self.is_factory = True
+    def _make_type_err_str(self, desired_type):
+        t = str(self.type)
+        dt = str(desired_type)
+        return "Thing that "+str(self)+" is "+("an " if t[0] in 'aeuio' else "a ")+t+", but must be "+("an " if dt[0] in 'aeuio' else "a ")+dt+"!"
 
-    def must_not_be_factory(self):
-        assert self.is_factory is not True, "Thing that "+str(self)+" is a factory, but it mustn't be!"
-        self.is_factory = False
+    def must_be_type(self, desired_type):
+        assert isinstance(desired_type, str)
+        assert self.type is None or self.type == desired_type, self._make_type_err_str(desired_type)
+        self.type = desired_type
+        return self
+
+    def must_be_primitive(self, primitive_type):
+        return self.must_be_type(primitive_type)
 
     def must(self, action, taking='', returning=''):
-        self.must_not_be_factory()
+        self.must_be_type('object')
         self.capabilities[action] = [taking,returning]
         setattr(self, action, types.MethodType(build_best_guess(taking, returning), self))
         return self
 
     def must_have(self, *attributes):
-        self.must_not_be_factory()
+        self.must_be_type('object')
         self.properties.extend(attributes)
         return self
 
     def must_use(self, **known_parameters):
-        self.must_not_be_factory()
+        self.must_be_type('object')
         self.known_parameters.update(known_parameters)
         return self
 
     def must_make(self, obj_type, parameters):
-        self.must_be_factory()
+        self.must_be_type('factory')
         self.parameters = re.split('\s*,\s*',parameters)
         setattr(self, 'make', types.MethodType(build_best_guess(parameters, obj_type), self))
-        return self
+        return Plastic()
 
     def that_must(self, action, taking='', returning=''):
         return self.must(action, taking, returning)
@@ -74,8 +80,12 @@ class Plastic:
 
     def __str__(self):
         result = 'must'
-        if self.is_factory:
-            result += " be factory ("+', '.join(self.parameters)+")"
+        if self.type is None:
+            return 'could be anything'
+        if self.type == 'factory':
+            result += " be a factory ("+', '.join(self.parameters)+")"
+        elif self.type != 'object':
+            result += " be "+("an " if self.type[0] in 'aeiou' else "a ")+self.type
         else:
             if len(self.properties) > 0:
                 result += " have "+', '.join(self.properties)
@@ -86,5 +96,5 @@ class Plastic:
                 result += " and" if result != 'must' else ""
                 result += " be created with "+', '.join(self.known_parameters.keys())
             if result == 'must':  # If the requirement has no properties, capabilities, or known parameters
-                return 'could be anything'
+                return "THIS USED TO SAY COULD BE ANYTHING BUT NOW THAT'S HANDLED BY TYPE IS NONE FIXME"
         return result
