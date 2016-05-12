@@ -28,7 +28,7 @@ patterns = MustHavePatterns(Khan, random.randint)
 khan = patterns.create(Khan)
 ```
 
-Must, there, knows to use random.randint to satisfy Khan's need for randomness. This is because Khan specifically asks for a thing that must be able to "randint". But what if whoever wrote Khan had asked for `get_random_integer` instead of `randint`? For this we can *alias* the `random.randint` function under the label Khan expects.
+Must, there, knows to use random.randint to satisfy Khan's need for randomness. This is because Khan specifically asks for a thing that must be able to `randint`. But what if whoever wrote Khan had asked for `get_random_integer` instead of `randint`? For this we can *alias* the `random.randint` function under the label Khan expects.
 
 ```python
 patterns = MustHavePatterns(Khan, random.randint)
@@ -63,12 +63,14 @@ class Ashigaru:
         self.enemy = enemy
 
     def follow_orders(self, orders):
-        must_be_string(orders)
+        orders = must_be_string(orders)
         if orders == "attack":
             self.body.attack(self.enemy)
         elif orders == "retreat":
             self.body.retreat()
 ```
+
+Note the call to `and_must` instead of `that_must`. These are both just aliases for the `must` method. `body.that_must('attack', 'target').and_must('retreat')` is equivalent to `body.must('attack', 'target').must('retreat')`.
 
 Now what happens if we try and create an Ashigaru?
 
@@ -120,15 +122,30 @@ Legions are Coordinated Armies. Why? Because they have a Warlord and some Warrio
 
 ```python
 class Legion:
-    def __init__(self, warlord, warrior_factory, warrior_count, enemy):
+    def __init__(self, warlord, warrior_factory, warrior_count, enemy, output_stream):
         self.warlord = warlord.that_must('give_orders')
         warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')
         warrior_count = must_be_natural_number(warrior_count)
+        self.output_stream = output_stream.that_must('output', 'text')
 
         self.warriors = [warrior_factory.make(enemy) for i in range(warrior_count)]
 
     def wage_war(self):
         orders = self.warlord.give_orders()
+        self.output_stream.output(str(self.warlord)+' orders: '+str(orders))
         for warrior in self.warriors:
             warrior.follow_orders(orders)
+```
+
+Legion has some interesting things about it. First, we notice that the constructor takes a warrior_factory. Unlike earlier examples that constrained dependencies by calling `must` (via aliases `that_must` & `and_must`), we constrain the warrior_factory by calling `must_make` (which also has aliases of `that_must_make` & `and_must_make`). By saying something `must_make`, we're telling Must that the dependency is a factory. We can chain additional calls to constrain the kinds of factories that we'll accept. In this case, the factory must take an enemy when it builds the warrior, and the warrior must follow_orders.
+
+All factories are created by Must, itself. Whenever we add a pattern to MustHavePatterns, Must automagically builds a corresponding factory for that pattern. Thus, without having to write a single line of code, we already have a KhanFactory, a WarriorBodyFactory, an AshigaruFactory, and so on. Calling `make` on an AshigaruFactory returns a new Ashigaru.
+
+Legion also takes a warrior_count. Unlike previous examples of dependencies, warrior_count is not an object; it's a natural number. When dealing with primitive data, we constrain it by calling one of several `must_be_x` functions. In this case we call `must_be_natural_number`. It is important that we assign the results of the must to the original variable before we do work with it.
+
+```python
+patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
+patterns.alias(get_random_integer="randint")
+legion = patterns.create(Legion, with_warrior_count=7, with_enemy="Cousin Steve")
+legion.wage_war()
 ```

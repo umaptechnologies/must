@@ -132,20 +132,37 @@ def must_be_natural_number(possible_natural_number, example=0):
         possible_natural_number.must_be_primitive('natural number')
         return example
     assert isinstance(possible_natural_number, int), "%s must be an integer (because it's supposed to be a natural number)!" % str(possible_natural_number)
-    assert possible_natural_number < 0, "%s must be non-negative (because it's supposed to be a natural number)!" % str(possible_natural_number)
+    assert possible_natural_number >= 0, "%s must be non-negative (because it's supposed to be a natural number)!" % str(possible_natural_number)
     return possible_natural_number
 
 
-class SafeFactory:
+class Factory:
     ''' WRITEME '''
-    def __init__(self, obj_constructor):
+    def __init__(self, obj_constructor, constructor_args, product_pattern, universe, known_parameters):
         self._obj_constructor = obj_constructor
-        self.is_factory = True
+        self._constructor_args = constructor_args
+        self._factory_header = constructor_args
+        self._product_pattern = product_pattern
+        self._universe = universe
+        self._known_parameters = known_parameters
 
     def make(self, *args):
-        return self._obj_constructor(*args)
+        arg_index = 0
+        dependencies = []
+        for a in self._constructor_args:
+            if a in self._factory_header:
+                dependencies.append(args[arg_index])
+                arg_index += 1
+            else:
+                namehint = str(self._obj_constructor)+' needs '+('an' if a[0] in 'aeiou' else 'a')+' "'+a+'" that'
+                dependencies.append(self._universe.create_with_namehint(namehint, self._product_pattern._dependencies[a]))
+        # TODO: Incorporate self._known_parameters
+        return self._obj_constructor(*dependencies)
 
     def must_make(self, obj_type, parameters):
+        new_factory_header = parameters.split(', ')
+        assert self._factory_header == self._constructor_args or new_factory_header == self._factory_header, "Factory parameters cannot be %s; already specified as %s." % (new_factory_header, self._factory_header)
+        self._factory_header = new_factory_header
         return SafeObject()
 
     def that_must_make(self, obj_type, parameters):
@@ -160,17 +177,22 @@ class FactoryPattern:
     def __init__(self, constructor):
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
+        self._product = ClassPattern(constructor)
 
     def create(self, universe, aliases, known_parameters):
-        return SafeFactory(self._constructor)
+        return Factory(self._constructor, self._constructor_args, self._product, universe, known_parameters)
 
     def matches(self, requirements, aliases):
         is_factory = requirements.type == 'factory'
         has_parameters = self.has_parameters(requirements.parameters)
-        return is_factory and has_parameters
+        product_matches = (requirements.product is None) or (self.product_matches(requirements.product, aliases))
+        return is_factory and has_parameters and product_matches
 
     def has_parameters(self, parameters):
         return all([x in self._constructor_args for x in parameters])
+
+    def product_matches(self, product, aliases):
+        return self._product.matches(product, aliases)
 
     def __str__(self):
         result = str(self._constructor)+" factory ("
@@ -207,7 +229,7 @@ class ClassPattern:
 
     def describe(self, member_name):
         if member_name == "__init__":
-            arg_headers = [x[0]+' that '+str(x[1]) for x in self._dependencies.items()]
+            arg_headers = [a+' that '+str(self._dependencies[a]) for a in self._constructor_args]
             return member_name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+str(self._constructor)
         raise NotImplementedError  # TODO
 
@@ -300,7 +322,7 @@ class MustHavePatterns:
 
     def create_with_namehint(self, name_hint, requirements):
         possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
-        assert len(possibilities) is 1, self._get_error_msg(name_hint, str(requirements), len(possibilities))
+        assert len(possibilities) is 1, self._get_error_msg(name_hint, str(requirements), possibilities)
         return possibilities[0].create(self, self._aliases, requirements.known_parameters)
 
     def create(self, requirements, **kwargs):
@@ -320,12 +342,19 @@ class MustHavePatterns:
                     return p.create(self, self._aliases, known_parameters)
         raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
-    def mock_dependencies(self, desired_pattern, function_name):
+    def mock_dependencies(self, desired_pattern, function_name='__init__'):
         if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
             for p in self._patterns:
                 if p._constructor == desired_pattern:
                     return p.mock_dependencies(function_name)
         raise Exception("Unable to mock dependencies for %s.%s" % (str(desired_pattern), function_name))
+
+    def describe(self, desired_pattern):
+        if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
+            for p in self._patterns:
+                if p._constructor == desired_pattern:
+                    return p.describe('__init__')  # TODO: Add to me.
+        raise Exception("Unable to describe %s" % str(desired_pattern))
 
     def alias(self, **aliases):
         for item in aliases.items():
@@ -346,13 +375,19 @@ class MustHavePatterns:
                 self._aliases[item[0]] = new_synonym_pool
                 self._aliases[item[1]] = new_synonym_pool
 
-    def _get_error_msg(self, name_hint, requirements_string, num_possibilities):
+    def _get_error_msg(self, name_hint, requirements_string, possibilities):
         # print "Patterns:"
         # for x in self._patterns:
         #    print '\t'+str(x)
+        num_possibilities = len(possibilities)
         if num_possibilities is 0:
             return name_hint+' '+requirements_string+"; couldn't find any matches."
         elif num_possibilities is 1:
             return "WTF! Invalid error!"
+        elif num_possibilities < 5:
+            return name_hint+' '+requirements_string+"; too many matches: "+str(map(str, possibilities))
         else:
             return name_hint+' '+requirements_string+"; found "+str(num_possibilities)+" matches!"
+
+    def __str__(self):
+        return "MustHavePatterns(n=%d)" % len(self._patterns)

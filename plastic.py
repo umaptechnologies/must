@@ -17,6 +17,7 @@ class Plastic:
         self.capabilities = {}
         self.parameters = []
         self.known_parameters = {}
+        self.product = None  # Only applies in the case of factories
 
     def _make_type_err_str(self, desired_type):
         t = str(self.type)
@@ -52,7 +53,8 @@ class Plastic:
         self.must_be_type('factory')
         self.parameters = re.split('\s*,\s*',parameters)
         setattr(self, 'make', types.MethodType(build_best_guess(parameters, obj_type), self))
-        return Plastic()
+        self.product = Plastic()
+        return self.product
 
     def that_must(self, action, taking='', returning=''):
         return self.must(action, taking, returning)
@@ -84,6 +86,8 @@ class Plastic:
             return 'could be anything'
         if self.type == 'factory':
             result += " be a factory ("+', '.join(self.parameters)+")"
+            if self.product is not None:
+                result += ' producing things that '+str(self.product)
         elif self.type != 'object':
             result += " be "+("an " if self.type[0] in 'aeiou' else "a ")+self.type
         else:

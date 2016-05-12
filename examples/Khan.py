@@ -47,20 +47,22 @@ class SingingSpear:
 
 
 class Legion:
-    def __init__(self, warlord, warrior_factory, warrior_count, enemy):
+    def __init__(self, warlord, warrior_factory, warrior_count, enemy, output_stream):
         self.warlord = warlord.that_must('give_orders')
         warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')
         warrior_count = must_be_natural_number(warrior_count)
+        self.output_stream = output_stream.that_must('output', 'text')
 
         self.warriors = [warrior_factory.make(enemy) for i in range(warrior_count)]
 
     def wage_war(self):
         orders = self.warlord.give_orders()
+        self.output_stream.output(str(self.warlord)+' orders: '+str(orders))
         for warrior in self.warriors:
             warrior.follow_orders(orders)
 
 
 patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
 patterns.alias(get_random_integer="randint")
-ashigaru = patterns.create(Ashigaru, with_enemy="Cousin Steve")
-ashigaru.follow_orders("attack")
+legion = patterns.create(Legion, with_warrior_count=7, with_enemy="Cousin Steve")
+legion.wage_war()
