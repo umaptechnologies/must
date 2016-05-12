@@ -4,6 +4,13 @@ from mock import MagicMock
 from plastic import Plastic
 
 
+def describe_function(name, argnames, arg_requirements, returns):
+    arg_headers = [argnames[i]+' that '+str(arg_requirements[i]) for i in range(len(argnames))]
+    if len(arg_headers) < 2:
+        return name+"("+','.join(arg_headers)+") -> "+str(returns)
+    return name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+str(returns)
+
+
 def _mock_must_return_itself_for_must_calls(mock):
     mock.must_be_type.return_value = mock
     mock.must_be_primitive = mock
@@ -229,8 +236,9 @@ class ClassPattern:
 
     def describe(self, member_name):
         if member_name == "__init__":
-            arg_headers = [a+' that '+str(self._dependencies[a]) for a in self._constructor_args]
-            return member_name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+str(self._constructor)
+            return describe_function(member_name, self._constructor_args, self._ordered_dependencies, self._constructor)
+        elif member_name in self._capabilities:
+            return describe_function(member_name, self._capabilities[member_name], range(len(self._capabilities[member_name])), '???')  # TODO: FLESH ME OUT!
         raise NotImplementedError  # TODO
 
     def mock_dependencies(self, method_name):
@@ -353,7 +361,10 @@ class MustHavePatterns:
         if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
             for p in self._patterns:
                 if p._constructor == desired_pattern:
-                    return p.describe('__init__')  # TODO: Add to me.
+                    members = p.describe('__init__')+"\n"
+                    for c in p._capabilities:
+                        members += p.describe(c)+"\n"
+                    return ("\n%s:\n\t" % p._constructor) + members.replace("\n","\n\t")
         raise Exception("Unable to describe %s" % str(desired_pattern))
 
     def alias(self, **aliases):

@@ -66,3 +66,4 @@ patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, r
 patterns.alias(get_random_integer="randint")
 legion = patterns.create(Legion, with_warrior_count=7, with_enemy="Cousin Steve")
 legion.wage_war()
+print patterns.describe(Khan)

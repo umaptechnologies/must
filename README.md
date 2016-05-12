@@ -1,6 +1,6 @@
 # Must
 
-Must is a combination dependency-injection, type-checking, and unit-testing library for python. The best way to understand Must is to see it in action.
+Must is a combination dependency-injection, type-checking, and testing-assistance library for python. The best way to understand Must is to see it in action.
 
 ## The Fickle Warlord
 
@@ -148,4 +148,13 @@ patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, r
 patterns.alias(get_random_integer="randint")
 legion = patterns.create(Legion, with_warrior_count=7, with_enemy="Cousin Steve")
 legion.wage_war()
+```
+
+## The Curious Programmer
+
+All this code is well and good, but what happens if a Curious Programmer wants to understand the system?
+
+```python
+patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
+print patterns.describe(Khan)
 ```
