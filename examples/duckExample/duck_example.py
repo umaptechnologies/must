@@ -1,15 +1,15 @@
 from patterns import patterns
-from plastic import Plastic
+from must import must_be_something
 
 
 def test_duck():
-    being1_location = patterns.create(Plastic().that_must_use(x=1,y=1))
-    being1 = patterns.create(Plastic()
+    being1_location = patterns.create(must_be_something().that_must_use(x=1,y=1))
+    being1 = patterns.create(must_be_something()
                              .that_must('start_conversation', returning='words')
                              .and_must_use(location=being1_location))
 
-    being2_location = patterns.create(Plastic().that_must_use(x=0,y=0))
-    being2 = patterns.create(Plastic()
+    being2_location = patterns.create(must_be_something().that_must_use(x=0,y=0))
+    being2 = patterns.create(must_be_something()
                              .that_must('respond', 'words, source')
                              .must_use(location=being2_location)
                              .and_must_have('energy'))
