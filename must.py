@@ -39,12 +39,6 @@ class MustOutputToStdOut:
 
 class SafeObject:
     ''' Never fails a must. '''
-    def must_be_factory(self):
-        return self
-
-    def must_not_be_factory(self):
-        return self
-
     def must(self, action, taking='', returning=''):
         return self
 
@@ -85,8 +79,6 @@ class SafeObject:
 def must_be_checkable(obj):
     if type(obj) in (int, bool, str):
         return
-
-    obj.is_factory = False
 
     def this_must(self, action, taking='', returning=''):
         # TODO: Assert!
@@ -170,13 +162,40 @@ class Factory:
         new_factory_header = parameters.split(', ')
         assert self._factory_header == self._constructor_args or new_factory_header == self._factory_header, "Factory parameters cannot be %s; already specified as %s." % (new_factory_header, self._factory_header)
         self._factory_header = new_factory_header
-        return SafeObject()
+        return self
 
     def that_must_make(self, obj_type, parameters):
         return self.must_make(obj_type, parameters)
 
     def and_must_make(self, obj_type, parameters):
         return self.must_make(obj_type, parameters)
+
+    def must(self, action, taking='', returning=''):
+        return self
+
+    def must_have(self, *attributes):
+        return self
+
+    def must_use(self, **known_parameters):
+        return self
+
+    def that_must(self, action, taking='', returning=''):
+        return self.must(action, taking, returning)
+
+    def that_must_have(self, *attributes):
+        return self.must_have(*attributes)
+
+    def that_must_use(self, **known_parameters):
+        return self.must_use(**known_parameters)
+
+    def and_must(self, action, taking='', returning=''):
+        return self.must(action, taking, returning)
+
+    def and_must_have(self, *attributes):
+        return self.must_have(*attributes)
+
+    def and_must_use(self, **known_parameters):
+        return self.must_use(**known_parameters)
 
 
 class FactoryPattern:
@@ -192,17 +211,15 @@ class FactoryPattern:
     def matches(self, requirements, aliases):
         is_factory = requirements.type == 'factory'
         has_parameters = self.has_parameters(requirements.parameters)
-        product_matches = (requirements.product is None) or (self.product_matches(requirements.product, aliases))
+        product_matches = (requirements.product is None) or \
+                          (self._product.matches(requirements.product, aliases))
         return is_factory and has_parameters and product_matches
 
     def has_parameters(self, parameters):
         return all([x in self._constructor_args for x in parameters])
 
-    def product_matches(self, product, aliases):
-        return self._product.matches(product, aliases)
-
     def __str__(self):
-        result = str(self._constructor)+" factory ("
+        result = str(self._constructor)+" factory("
         result += ', '.join(self._constructor_args)
         result += ")"
         return result
@@ -263,7 +280,7 @@ class ClassPattern:
         return result
 
     def matches(self, requirements, aliases):
-        right_type = requirements.type == 'object'
+        right_type = requirements.type is None or requirements.type == 'object'
         has_properties = self.has(requirements.properties)
         takes_parameters = self.takes(requirements.known_parameters.keys())
         has_capabilities = self.can(requirements.capabilities, aliases)
@@ -324,9 +341,11 @@ class MustHavePatterns:
                         pass
                 setattr(MustWrap, c.__name__, c)
                 self._patterns.append(ClassPattern(MustWrap))
-            else:
+            elif inspect.isclass(c):
                 self._patterns.append(ClassPattern(c))
                 self._patterns.append(FactoryPattern(c))
+            else:
+                raise TypeError('Must cannot handle %s because it is of %s.' % (str(c), type(c)))
 
     def create_with_namehint(self, name_hint, requirements):
         possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)

@@ -22,7 +22,7 @@ class Plastic:
     def _make_type_err_str(self, desired_type):
         t = str(self.type)
         dt = str(desired_type)
-        return "Thing that "+str(self)+" is "+("an " if t[0] in 'aeuio' else "a ")+t+", but must be "+("an " if dt[0] in 'aeuio' else "a ")+dt+"!"
+        return "Thing (that "+str(self)+") is "+("an " if t[0] in 'aeuio' else "a ")+t+", but must be "+("an " if dt[0] in 'aeuio' else "a ")+dt+"!"
 
     def must_be_type(self, desired_type):
         assert isinstance(desired_type, str)
@@ -34,17 +34,26 @@ class Plastic:
         return self.must_be_type(primitive_type)
 
     def must(self, action, taking='', returning=''):
+        if self.type == 'factory' and self.product is not None:
+            self.product.must(action, taking, returning)
+            return self
         self.must_be_type('object')
         self.capabilities[action] = [taking,returning]
         setattr(self, action, types.MethodType(build_best_guess(taking, returning), self))
         return self
 
     def must_have(self, *attributes):
+        if self.type == 'factory' and self.product is not None:
+            self.product.must_have(*attributes)
+            return self
         self.must_be_type('object')
         self.properties.extend(attributes)
         return self
 
     def must_use(self, **known_parameters):
+        if self.type == 'factory' and self.product is not None:
+            self.product.must_use(**known_parameters)
+            return self
         self.must_be_type('object')
         self.known_parameters.update(known_parameters)
         return self
@@ -54,7 +63,7 @@ class Plastic:
         self.parameters = re.split('\s*,\s*',parameters)
         setattr(self, 'make', types.MethodType(build_best_guess(parameters, obj_type), self))
         self.product = Plastic()
-        return self.product
+        return self
 
     def that_must(self, action, taking='', returning=''):
         return self.must(action, taking, returning)
@@ -99,6 +108,4 @@ class Plastic:
             if len(self.known_parameters) > 0:
                 result += " and" if result != 'must' else ""
                 result += " be created with "+', '.join(self.known_parameters.keys())
-            if result == 'must':  # If the requirement has no properties, capabilities, or known parameters
-                return "THIS USED TO SAY COULD BE ANYTHING BUT NOW THAT'S HANDLED BY TYPE IS NONE FIXME"
         return result
