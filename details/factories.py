@@ -15,13 +15,14 @@ class Factory:
     def make(self, *args):
         arg_index = 0
         dependencies = []
-        for a in self._constructor_args:
+        for i in range(len(self._constructor_args)):
+            a = self._constructor_args[i]
             if a in self._factory_header:
                 dependencies.append(args[arg_index])
                 arg_index += 1
             else:
                 namehint = str(self._obj_constructor)+' needs '+('an' if a[0] in 'aeiou' else 'a')+' "'+a+'" that'
-                dependencies.append(self._universe.create_with_namehint(namehint, self._product_pattern._dependencies[a]))
+                dependencies.append(self._universe.create_with_namehint(namehint, self._product_pattern._constructor.param_signatures[i].get_param_mold()))
         # TODO: Incorporate self._known_parameters
         return self._obj_constructor(*dependencies)
 
@@ -71,6 +72,9 @@ class FactoryPattern:
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
         self._product = ClassPattern(constructor)
+
+    def reflects_class(self, possible_class):
+        return False
 
     def create(self, universe, aliases, known_parameters):
         return Factory(self._constructor, self._constructor_args, self._product, universe, known_parameters)

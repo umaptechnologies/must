@@ -5,7 +5,7 @@ from must import must_be_something
 def test_duck():
     being1_location = patterns.create(must_be_something().that_must_use(x=1,y=1))
     being1 = patterns.create(must_be_something()
-                             .that_must('start_conversation', returning='words')
+                             .that_must('start_conversation', returning=str)
                              .and_must_use(location=being1_location))
 
     being2_location = patterns.create(must_be_something().that_must_use(x=0,y=0))

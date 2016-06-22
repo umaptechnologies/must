@@ -11,7 +11,8 @@ def build_best_guess(taking, returning):
 
 class Plastic:
     ''' WRITEME '''
-    def __init__(self):
+    def __init__(self, name=None):
+        self.name = name
         self.type = None  # This becomes a string as soon as a requirement is specified
         self.properties = []
         self.capabilities = {}
@@ -22,7 +23,7 @@ class Plastic:
     def _make_type_err_str(self, desired_type):
         t = str(self.type)
         dt = str(desired_type)
-        return "Thing (that "+str(self)+") is "+("an " if t[0] in 'aeuio' else "a ")+t+", but must be "+("an " if dt[0] in 'aeuio' else "a ")+dt+"!"
+        return ('Thing' if self.name is None else '"'+self.name+'"')+" (that "+str(self)+") is "+("an " if t[0] in 'aeuio' else "a ")+t+", but must be "+("an " if dt[0] in 'aeuio' else "a ")+dt+"!"
 
     def must_be_type(self, desired_type):
         assert isinstance(desired_type, str)
@@ -89,9 +90,50 @@ class Plastic:
     def and_must_make(self, obj_type, parameters):
         return self.must_make(obj_type, parameters)
 
+    def matches(self, requirements, aliases):
+        # TODO: This is mirrored in class_pattern. Figure out a way to fuse them.
+        right_type = requirements.type is None or requirements.type == self.type
+        has_properties = self.has(requirements.properties)
+        has_capabilities = self.can(requirements.capabilities, aliases)
+        return right_type and has_properties and has_capabilities
+
+    def has(self, attributes):
+        return all([x in self.properties for x in attributes])
+
+    def can(self, target_capabilities, aliases):
+        for target_capability in target_capabilities.items():
+            action = target_capability[0]
+            taking = target_capability[1][0]
+            returning = target_capability[1][1]
+            if action in aliases:
+                possible_actions = aliases[action]
+                if not any([self.can_do_action(a,taking,returning,aliases) for a in possible_actions]):
+                    return False
+            else:
+                if not self.can_do_action(action, taking, returning, aliases):
+                    return False
+        return True
+
+    def can_do_action(self, action, taking, returning, aliases):
+        if action in self.capabilities:
+            numberOfArgsTaken = 0 if len(taking) is 0 else taking.count(',')+1  # TODO: This is bad and should feel bad.
+            numberOfArgsProvided = len(self.capabilities[action].args)
+            sameNumberOfArgs = numberOfArgsTaken == numberOfArgsProvided
+            if sameNumberOfArgs:
+                if returning and self.capabilities[action].returns:
+                    return self.capabilities[action].returns.matches(returning, aliases)
+                return True
+            return False
+        return False
+
     def __str__(self):
-        result = 'must'
+        result = ''
+        if self.name is not None:
+            result += '"'+self.name+'" that '
+        result += 'must'
         if self.type is None:
+            if self.name is not None:
+                return '"'+self.name+'" (could be anything)'
             return 'could be anything'
         if self.type == 'factory':
             result += " be a factory ("+', '.join(self.parameters)+")"

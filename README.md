@@ -1,3 +1,11 @@
+Max needs to implement this next:
+```python
+class Successor:
+    def __init__(self, prev): self.prev = prev that must get_prev
+    def get_prev(self): return self.prev
+```
+
+
 # Must
 
 Must is a combination dependency-injection, type-checking, and testing-assistance library for python. The best way to understand Must is to see it in action.
