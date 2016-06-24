@@ -52,7 +52,7 @@ class ParameterSignature:
 
 class FunctionSignature:
     '''WRITEME'''
-    def __init__(self, f, owner_obj=None):
+    def __init__(self, f, owner_obj=None, ignore_warnings=False):
         self.function = f
         self.name = f.__name__
         self.args, self.varargs, self.keywords, self.defaults = inspect.getargspec(f.__init__ if inspect.isclass(f) else f)
@@ -72,9 +72,11 @@ class FunctionSignature:
         try:
             self.mold_result = f(*[p.get_param_mold() for p in self.param_signatures])
         except Exception as ex:
-            # TODO: Provide better user notification and details on failure
-            self.mold_result = ex
-            print 'I MUST WARN YOU: ' + str(ex)
+            if self.returns is None and not ignore_warnings:
+                # TODO: Provide better user notification and details on failure
+                self.mold_result = ex
+                print 'I MUST WARN YOU: ' + str(ex)
+                print 'Warning in ' + str(self)
         if self.is_method:
             del owner_obj.must_return
         if self.returns is None:
@@ -104,8 +106,8 @@ class FunctionSignature:
 
 class ClassPattern:
     ''' WRITEME '''
-    def __init__(self, constructor):
-        self._constructor = FunctionSignature(constructor)
+    def __init__(self, constructor, ignore_warnings=False):
+        self._constructor = FunctionSignature(constructor, ignore_warnings=ignore_warnings)
         self._properties = []
         self._capabilities = {}
 
@@ -114,7 +116,7 @@ class ClassPattern:
         for m in members:
             m_name, m_val = m
             if callable(m_val):
-                self._capabilities[m_name] = FunctionSignature(m_val, obj)
+                self._capabilities[m_name] = FunctionSignature(m_val, obj, ignore_warnings=ignore_warnings)
             else:
                 self._properties.append(m_name)
 

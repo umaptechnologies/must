@@ -68,7 +68,7 @@ class Factory:
 
 class FactoryPattern:
     ''' WRITEME '''
-    def __init__(self, constructor):
+    def __init__(self, constructor, ignore_warnings=False):
         self._constructor = constructor
         self._constructor_args = inspect.getargspec(constructor.__init__).args[1:]  # Ignore 'self'
         self._product = ClassPattern(constructor)

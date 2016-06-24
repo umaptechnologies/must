@@ -8,7 +8,8 @@ from Legion import Legion
 import random
 from must import MustOutputToStdOut
 
-patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
+patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, MustOutputToStdOut)
+patterns.add(random.randint, ignore_warnings=True)
 patterns.alias(get_random_integer="randint")
 
 

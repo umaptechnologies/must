@@ -32,23 +32,29 @@ class MustHavePatterns:
     def __init__(self, *constructors):
         self._aliases = {}
         self._patterns = []
+        self.add_all(constructors)
+
+    def add(self, constructor, ignore_warnings=False):
+        self.add_all([constructor], ignore_warnings)
+
+    def add_all(self, constructors, ignore_warnings=False):
         for c in constructors:
             if hasattr(c, '__call__'):
                 class MustWrap:
                     def __init__(self):
                         pass
                 setattr(MustWrap, c.__name__, c)
-                self._patterns.append(ClassPattern(MustWrap))
+                self._patterns.append(ClassPattern(MustWrap, ignore_warnings))
             elif inspect.isclass(c):
-                self._patterns.append(ClassPattern(c))
-                self._patterns.append(FactoryPattern(c))
+                self._patterns.append(ClassPattern(c, ignore_warnings))
+                self._patterns.append(FactoryPattern(c, ignore_warnings))
             else:
                 raise TypeError('Must cannot handle %s because it is of %s.' % (str(c), type(c)))
 
     def create_with_namehint(self, name_hint, requirements):
         possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
         if len(possibilities) is not 1:
-            raise CantFindDependency(name_hint, str(requirements), possibilities)
+            raise CantFindDependency(name_hint, requirements, possibilities)
         return possibilities[0].create(self, self._aliases, requirements.known_parameters)
 
     def create(self, requirements, **kwargs):

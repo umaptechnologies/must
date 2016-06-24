@@ -146,8 +146,14 @@ class Plastic:
                 result += " have "+', '.join(self.properties)
             if len(self.capabilities) > 0:
                 result += ("," if len(self.known_parameters) > 0 else " and") if result != 'must' else ""
-                result += " be able to "+', '.join(self.capabilities.keys())
+                if len(self.capabilities) > 1:
+                    result += " be able to "+', '.join(self.capabilities.keys())
+                else:
+                    result += " be able to "+self._describe_capability(0)
             if len(self.known_parameters) > 0:
                 result += " and" if result != 'must' else ""
                 result += " be created with "+', '.join(self.known_parameters.keys())
         return result
+
+    def _describe_capability(self, index):
+        return self.capabilities.keys()[index]+'('+self.capabilities.values()[index][0]+') -> '+str(self.capabilities.values()[index][1])
