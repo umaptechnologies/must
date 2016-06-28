@@ -6,4 +6,5 @@ class WordSpitter:
         self.favorite_word = must_be_string(favorite_word)
 
     def say(self, suffix=None):
+        self.must_return(str)
         return self.favorite_word+('' if suffix is None else suffix)

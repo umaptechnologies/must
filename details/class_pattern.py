@@ -62,8 +62,10 @@ class FunctionSignature:
             self.args = self.args[1:]  # Shave off 'self'
         self.param_signatures = [ParameterSignature(x) for x in self.args]
         self.returns = None
+        self.has_explicit_return_value = False
         if self.is_method:
             def note_return(x):
+                self.has_explicit_return_value = True
                 self.returns = x
                 if type(x) is str:
                     self.returns = Plastic(x)
@@ -72,11 +74,12 @@ class FunctionSignature:
         try:
             self.mold_result = f(*[p.get_param_mold() for p in self.param_signatures])
         except Exception as ex:
-            if self.returns is None and not ignore_warnings:
+            if self.has_explicit_return_value is False and not ignore_warnings:
                 # TODO: Provide better user notification and details on failure
                 self.mold_result = ex
                 print 'I MUST WARN YOU: ' + str(ex)
                 print 'Warning in ' + str(self)
+                print ''
         if self.is_method:
             del owner_obj.must_return
         if self.returns is None:
@@ -94,14 +97,20 @@ class FunctionSignature:
     def mock_params(self):
         return [x.mock() for x in self.param_signatures]
 
+    def _return_str(self):
+        if self.has_explicit_return_value:
+            return str(self.returns)
+        else:
+            return '???'
+
     def __str__(self):
         arg_headers = [str(p) for p in self.param_signatures]
         for i in range(len(self.args)):
             if self.get_default(i) is not None:
                 arg_headers[i] += ' (default='+str(self.get_default(i))+')'
         if len(arg_headers) < 2:
-            return self.name+"("+','.join(arg_headers)+") -> "+str(self.returns)
-        return self.name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+str(self.returns)
+            return self.name+"("+','.join(arg_headers)+") -> "+self._return_str()
+        return self.name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+self._return_str()
 
 
 class ClassPattern:
@@ -198,7 +207,10 @@ class ClassPattern:
             sameNumberOfArgs = numberOfArgsTaken == numberOfArgsProvided
             if sameNumberOfArgs:
                 if returning and self._capabilities[action].returns:
-                    return self._capabilities[action].returns.matches(returning, aliases)
+                    if isinstance(self._capabilities[action].returns, type):
+                        return self._capabilities[action].returns == returning
+                    else:
+                        return self._capabilities[action].returns.matches(returning, aliases)
                 return True
             return False
         return False

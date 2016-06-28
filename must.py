@@ -6,12 +6,14 @@ from details.class_pattern import ClassPattern
 from details.cant_find_dependency import CantFindDependency
 from details.primitive_musts import must_be_string
 from details.primitive_musts import must_be_natural_number
+from details.primitive_musts import must_be_real_number
 from details.primitive_musts import must_list_objects
 
 must_be_something = Plastic  # This is an alias for importing.
 _ = (
     must_be_string,
     must_be_natural_number,
+    must_be_real_number,
     must_list_objects,
 )  # Just to get the linter to shut up
 

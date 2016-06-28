@@ -1,3 +1,5 @@
+Currently fixing: Self-dependencies not using must-magic when calling self constructor
+
 Max needs to implement this next:
 ```python
 class Successor:

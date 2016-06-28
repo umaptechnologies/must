@@ -75,3 +75,11 @@ def must_be_integer(possible_integer, example=0):
         return example
     assert isinstance(possible_integer, int), "%s must be an integer (because it's supposed to be a natural number)!" % str(possible_integer)
     return possible_integer
+
+
+def must_be_real_number(possible_real_number, example=0):
+    if isinstance(possible_real_number, Plastic):
+        possible_real_number.must_be_primitive('real number')
+        return example
+    assert isinstance(possible_real_number, float) or isinstance(possible_real_number, int), "%s must be a real number!" % str(possible_real_number)
+    return possible_real_number

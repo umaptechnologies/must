@@ -4,6 +4,7 @@ class NormalEyes:
         pass
 
     def look(self, target):
+        self.must_return(str)
         return str(target)
 
 

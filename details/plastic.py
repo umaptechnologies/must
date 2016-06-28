@@ -11,8 +11,9 @@ def build_best_guess(taking, returning):
 
 class Plastic:
     ''' WRITEME '''
-    def __init__(self, name=None):
+    def __init__(self, name=None, parent=None):
         self.name = name
+        self.parent = parent  # TODO: This has to do with lists of plastic or something. Idk. Needs to be figured out.
         self.type = None  # This becomes a string as soon as a requirement is specified
         self.properties = []
         self.capabilities = {}
@@ -92,10 +93,18 @@ class Plastic:
 
     def matches(self, requirements, aliases):
         # TODO: This is mirrored in class_pattern. Figure out a way to fuse them.
+        if self.type is not None and self.type != 'object':
+            return self.type_matches(requirements)
         right_type = requirements.type is None or requirements.type == self.type
         has_properties = self.has(requirements.properties)
         has_capabilities = self.can(requirements.capabilities, aliases)
         return right_type and has_properties and has_capabilities
+
+    def type_matches(self, other):
+        if self.type == 'real number':
+            return type(other) is float or type(other) is int
+        else:
+            raise NotImplementedError("Must doesn't know how to check type of: "+str(self.type))
 
     def has(self, attributes):
         return all([x in self.properties for x in attributes])

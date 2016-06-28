@@ -1,8 +1,8 @@
 class Duck:
     ''' I'm a duck! '''
     def __init__(self, wings, eyes, location, feet):
-        self.wings = wings.that_must('flap', 'frequency', 'calories_burnt')
-        self.eyes = eyes.that_must('look', 'target', 'appearance')
+        self.wings = wings.that_must('flap', 'frequency', float)
+        self.eyes = eyes.that_must('look', 'target', str)
         self.location = location \
             .that_must_have('x','y') \
             .and_must('translate',taking='other_vector') \
@@ -28,7 +28,8 @@ class UselessDuckWings:
         pass
 
     def flap(self, frequency):
-        return frequency*2  # calories_burnt
+        self.must_return(float)
+        return frequency*2
 
 
 class MeanChild:

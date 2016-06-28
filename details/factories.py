@@ -1,5 +1,6 @@
 import inspect
 from class_pattern import ClassPattern
+from primitive_musts import SafeObject
 
 
 class Factory:
@@ -24,7 +25,9 @@ class Factory:
                 namehint = str(self._obj_constructor)+' needs '+('an' if a[0] in 'aeiou' else 'a')+' "'+a+'" that'
                 dependencies.append(self._universe.create_with_namehint(namehint, self._product_pattern._constructor.param_signatures[i].get_param_mold()))
         # TODO: Incorporate self._known_parameters
-        return self._obj_constructor(*dependencies)
+        result = self._obj_constructor(*dependencies)
+        result.must_return = lambda x: SafeObject()
+        return result
 
     def must_make(self, obj_type, parameters):
         new_factory_header = parameters.split(', ')
@@ -64,6 +67,12 @@ class Factory:
 
     def and_must_use(self, **known_parameters):
         return self.must_use(**known_parameters)
+
+    def __str__(self):
+        result = str(self._obj_constructor)+" factory("
+        result += ', '.join(self._constructor_args)
+        result += ")"
+        return result
 
 
 class FactoryPattern:
