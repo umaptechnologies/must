@@ -64,10 +64,14 @@ class FunctionSignature:
         self.returns = None
         self.has_explicit_return_value = False
         if self.is_method:
-            def note_return(x):
+            def note_return(*x):
+                if len(x) == 1:
+                    x = x[0]
                 self.has_explicit_return_value = True
                 self.returns = x
-                if type(x) is str:
+                if type(x) is tuple:
+                    self.returns = map(Plastic, x)
+                elif type(x) is str:
                     self.returns = Plastic(x)
                 return self.returns
             owner_obj.must_return = note_return
@@ -170,7 +174,7 @@ class ClassPattern:
         result = self._constructor.function(**params)
         must_handle_synonyms(result, aliases)
         must_be_checkable(result)
-        result.must_return = lambda x: SafeObject()
+        result.must_return = lambda *x: SafeObject()
         return result
 
     def matches(self, requirements, aliases):
@@ -210,7 +214,11 @@ class ClassPattern:
                     if isinstance(self._capabilities[action].returns, type):
                         return self._capabilities[action].returns == returning
                     else:
-                        return self._capabilities[action].returns.matches(returning, aliases)
+                        if type(self._capabilities[action].returns) is list:
+                            # TODO: THIS IS A BAD CHECK
+                            return len(self._capabilities[action].returns) == returning.count(',')+1
+                        else:
+                            return self._capabilities[action].returns.matches(returning, aliases)
                 return True
             return False
         return False

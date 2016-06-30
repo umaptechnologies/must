@@ -9,6 +9,7 @@ class DayBreaker:
     def break_by_day(self, list_to_break, day_transitions):
         must_list_objects(list_to_break).that_must_have('time')  # and must be sorted by time
         must_list_objects(day_transitions).that_must_have('time')  # and must be sorted by time
+        self.must_return(list)
 
         results = []
         today = []

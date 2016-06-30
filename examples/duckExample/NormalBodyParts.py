@@ -14,4 +14,5 @@ class NormalFeet:
         self._vector_factory = vector_factory.that_must_make('vector','x, y')
 
     def walk(self, speed, direction):
+        self.must_return(int, 'vector')
         return speed, self._vector_factory.make(direction.x*speed, direction.y*speed)
