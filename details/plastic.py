@@ -164,5 +164,11 @@ class Plastic:
                 result += " be created with "+', '.join(self.known_parameters.keys())
         return result
 
+    def _return_str(self, capability):
+        result = str(capability[1])
+        if result == '':
+            return '??'
+        return result
+
     def _describe_capability(self, index):
-        return self.capabilities.keys()[index]+'('+self.capabilities.values()[index][0]+') -> '+str(self.capabilities.values()[index][1])
+        return self.capabilities.keys()[index]+'('+self.capabilities.values()[index][0]+') -> '+self._return_str(self.capabilities.values()[index])

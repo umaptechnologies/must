@@ -87,6 +87,7 @@ class FunctionSignature:
         if self.is_method:
             del owner_obj.must_return
         if self.returns is None:
+            self.has_explicit_return_value = True
             self.returns = self.name if inspect.isclass(f) else None
 
     def get_default(self, index):

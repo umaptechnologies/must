@@ -1,13 +1,3 @@
-Currently fixing: Self-dependencies not using must-magic when calling self constructor
-
-Max needs to implement this next:
-```python
-class Successor:
-    def __init__(self, prev): self.prev = prev that must get_prev
-    def get_prev(self): return self.prev
-```
-
-
 # Must
 
 Must is a combination dependency-injection, type-checking, and testing-assistance library for python. The best way to understand Must is to see it in action.
@@ -19,7 +9,7 @@ Khans are Fickle Warlords. Why? Because they give orders randomly.
 ```python
 class Khan:
     def __init__(self, random):
-        self.random = random.that_must('randint', 'lower_bound_incl, upper_bound_incl')
+        self.random = random.that_must('randint', 'lower_bound_incl, upper_bound_incl', int)
 
     def give_orders(self):
         possible_orders = ['attack', 'retreat']
@@ -167,4 +157,12 @@ All this code is well and good, but what happens if a Curious Programmer wants t
 ```python
 patterns = MustHavePatterns(Khan, WarriorBody, Ashigaru, SingingSpear, Legion, random.randint, MustOutputToStdOut)
 print patterns.describe(Khan)
+```
+
+This will spit out a description of the Khan class:
+
+```
+Khan:
+        Khan(random that must be able to get_random_integer(lower_bound_incl, upper_bound_incl) -> <type 'int'>) -> Khan
+        give_orders() -> <type 'str'>
 ```
