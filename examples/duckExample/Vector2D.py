@@ -1,4 +1,4 @@
-class Vector2D:
+class Vector2D(object):
     ''' Yet another vector class. '''
     def __init__(self, vector_factory, x, y):
         self.vector_factory = vector_factory.that_must_make('Vector2D', 'vector_factory, x, y')

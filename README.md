@@ -7,7 +7,7 @@ Must is a combination dependency-injection, type-checking, and testing-assistanc
 Khans are Fickle Warlords. Why? Because they give orders randomly.
 
 ```python
-class Khan:
+class Khan(object):
     def __init__(self, random):
         self.random = random.that_must('randint', 'lower_bound_incl, upper_bound_incl', int)
 
@@ -43,7 +43,7 @@ Aliasing is a standard part of the Must encapsulation paradigm: modules should f
 WarriorBodies are the Bodies of Simple Warriors. Why? Because they hold weapons, and can attack or retreat.
 
 ```python
-class WarriorBody:
+class WarriorBody(object):
     def __init__(self, weapon):
         self.weapon = weapon.that_must('strike', 'target')
 
@@ -57,7 +57,7 @@ class WarriorBody:
 Or at least they can attack. When a WarriorBody retreats nothing happens. Note that a WarriorBody is not able to listen to orders. To make things work together, we'll make a new class, Ashigaru, to handle the entirety of being a Simple Warrior.
 
 ```python
-class Ashigaru:
+class Ashigaru(object):
     def __init__(self, body, enemy):
         self.body = body.that_must('attack', 'target').and_must('retreat')
         self.enemy = enemy
@@ -87,7 +87,7 @@ Must will inform us of the missing dependency:
 In other words, to create our Ashigaru, we need a WarriorBody, and to create a WarriorBody we need a Weapon. With Must we can build our modules in a way that their dependencies don't have to be in place when building or unit-testing them (you don't even need interfaces), but then they're easy to determine when it comes time to wire them together.
 
 ```python
-class SingingSpear:
+class SingingSpear(object):
     def __init__(self, output_stream):
         self.output_stream = output_stream.that_must('output', 'text')
 
@@ -121,7 +121,7 @@ ashigaru.follow_orders("attack")
 Legions are Coordinated Armies. Why? Because they have a Warlord and some Warriors that wage war together.
 
 ```python
-class Legion:
+class Legion(object):
     def __init__(self, warlord, warrior_factory, warrior_count, enemy, output_stream):
         self.warlord = warlord.that_must('give_orders')
         warrior_factory = warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')

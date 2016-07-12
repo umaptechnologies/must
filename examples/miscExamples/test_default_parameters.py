@@ -2,7 +2,7 @@ from must import MustHavePatterns
 from default_parameters import WordSpitter
 
 
-class TestWordSpitter:
+class TestWordSpitter(object):
     def setup(self):
         test_patterns = MustHavePatterns(WordSpitter)
         self.spitter = test_patterns.create(WordSpitter)

@@ -1,4 +1,4 @@
-class Duck:
+class Duck(object):
     ''' I'm a duck! '''
     def __init__(self, wings, eyes, location, feet):
         self.wings = wings.that_must('flap', 'frequency', float)
@@ -22,7 +22,7 @@ class Duck:
             self.location.translate(movement)
 
 
-class UselessDuckWings:
+class UselessDuckWings(object):
     ''' I can flap, but nothing else. '''
     def __init__(self):
         pass
@@ -32,7 +32,7 @@ class UselessDuckWings:
         return frequency*2
 
 
-class MeanChild:
+class MeanChild(object):
     ''' I'm a kid that loves saying "Boo!" '''
     def __init__(self, location):
         self.location = location.that_must_have('x','y').and_must('translate','other_vector')

@@ -1,4 +1,4 @@
-class HearthstoneDeck:
+class HearthstoneDeck(object):
     ''' Replicates the functionality of a deck in Hearthstone. '''
     def __init__(self, decklist, shuffler, fatigue_factory):
         decklist.must('get_list', returning='[card]')

@@ -3,7 +3,7 @@ from class_pattern import ClassPattern
 from primitive_musts import SafeObject
 
 
-class Factory:
+class Factory(object):
     ''' WRITEME '''
     def __init__(self, obj_constructor, constructor_args, product_pattern, universe, known_parameters):
         self._obj_constructor = obj_constructor
@@ -75,7 +75,7 @@ class Factory:
         return result
 
 
-class FactoryPattern:
+class FactoryPattern(object):
     ''' WRITEME '''
     def __init__(self, constructor, ignore_warnings=False):
         self._constructor = constructor

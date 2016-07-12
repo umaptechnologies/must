@@ -1,7 +1,7 @@
 from must import must_be_string
 
 
-class Ashigaru:
+class Ashigaru(object):
     def __init__(self, body, enemy):
         self.body = body.that_must('attack', 'target').and_must('retreat')
         self.enemy = enemy

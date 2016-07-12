@@ -3,7 +3,7 @@ from hearthstone_deck import HearthstoneDeck
 from mock import call
 
 
-class TestHearthsoneDeck:
+class TestHearthsoneDeck(object):
     def setup(self):
         test_patterns = MustHavePatterns(HearthstoneDeck)
         self.mock_decklist, self.mock_shuffler, self.mock_fatigue_factory = test_patterns.mock_dependencies(HearthstoneDeck, '__init__')

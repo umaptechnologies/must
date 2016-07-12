@@ -5,3 +5,4 @@ from NormalBodyParts import NormalEyes, NormalFeet
 from Vector2D import Vector2D
 
 patterns = MustHavePatterns(Duck, MeanChild, UselessDuckWings, NormalEyes, NormalFeet, Vector2D)
+print patterns.describe(Duck)

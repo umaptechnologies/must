@@ -1,4 +1,4 @@
-class NormalEyes:
+class NormalEyes(object):
     ''' I'm a pair of eyes! '''
     def __init__(self):
         pass
@@ -8,7 +8,7 @@ class NormalEyes:
         return str(target)
 
 
-class NormalFeet:
+class NormalFeet(object):
     ''' I'm a pair of feet! '''
     def __init__(self, vector_factory):
         self._vector_factory = vector_factory.that_must_make('vector','x, y')

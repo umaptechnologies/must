@@ -18,7 +18,7 @@ _ = (
 )  # Just to get the linter to shut up
 
 
-class MustOutputToStdOut:
+class MustOutputToStdOut(object):
     ''' Wrapper for the "print" statement. '''
     def __init__(self):
         pass
@@ -29,7 +29,7 @@ class MustOutputToStdOut:
         print text
 
 
-class MustHavePatterns:
+class MustHavePatterns(object):
     ''' Nothing to see here... '''
     def __init__(self, *constructors):
         self._aliases = {}
@@ -41,15 +41,15 @@ class MustHavePatterns:
 
     def add_all(self, constructors, ignore_warnings=False):
         for c in constructors:
-            if hasattr(c, '__call__'):
-                class MustWrap:
+            if inspect.isclass(c):
+                self._patterns.append(ClassPattern(c, ignore_warnings))
+                self._patterns.append(FactoryPattern(c, ignore_warnings))
+            elif hasattr(c, '__call__'):
+                class MustWrap(object):
                     def __init__(self):
                         pass
                 setattr(MustWrap, c.__name__, c)
                 self._patterns.append(ClassPattern(MustWrap, ignore_warnings))
-            elif inspect.isclass(c):
-                self._patterns.append(ClassPattern(c, ignore_warnings))
-                self._patterns.append(FactoryPattern(c, ignore_warnings))
             else:
                 raise TypeError('Must cannot handle %s because it is of %s.' % (str(c), type(c)))
 
@@ -74,6 +74,7 @@ class MustHavePatterns:
             for p in self._patterns:
                 if p.reflects_class(requirements):
                     return p.create(self, self._aliases, known_parameters)
+            raise Exception("Can't find pattern that matches specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
         raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
 
     def mock_dependencies(self, desired_pattern, function_name='__init__'):

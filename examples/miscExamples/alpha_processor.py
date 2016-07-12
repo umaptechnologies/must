@@ -1,30 +1,30 @@
 from must import must_be_something
 
 
-class Alpha:
+class Alpha(object):
     def __init__(self):
         pass
 
 
-class Beta:
+class Beta(object):
     def __init__(self, root):
         self.root = root
         self.special_sauce = True
 
 
-class Omega:
+class Omega(object):
     def __init__(self, root):
         self.root = root
         self.dance_paste = True
 
 
-class Gamma:
+class Gamma(object):
     def __init__(self, root, quickshot):
         self.root = root
         self.quickshot = quickshot
 
 
-class AlphaToBetaProcessor:
+class AlphaToBetaProcessor(object):
     def __init__(self, beta_factory):
         self.beta_factory = beta_factory.that_must_make('beta', 'root').that_must_have('special_sauce')
 
@@ -33,7 +33,7 @@ class AlphaToBetaProcessor:
         return self.beta_factory.make(alpha)
 
 
-class AlphaToOmegaProcessor:
+class AlphaToOmegaProcessor(object):
     def __init__(self, omega_factory):
         self.omega_factory = omega_factory.that_must_make('omega', 'root').that_must_have('dance_paste')
 
@@ -42,7 +42,7 @@ class AlphaToOmegaProcessor:
         return self.omega_factory.make(alpha)
 
 
-class AlphaToGammaProcessor:
+class AlphaToGammaProcessor(object):
     def __init__(self, alpha_to_beta_processor, gamma_factory):
         self.alpha_to_beta_processor = alpha_to_beta_processor.that_must('process', 'alpha', must_be_something().that_must_have('special_sauce'))
         self.gamma_factory = gamma_factory.that_must_make('gamma', 'root, quickshot')

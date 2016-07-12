@@ -2,7 +2,7 @@ from must import MustHavePatterns
 from day_breaker import DayBreaker
 
 
-class TestDayBreaker:
+class TestDayBreaker(object):
     @classmethod
     def setup_class(cls):
         cls.test_patterns = MustHavePatterns(DayBreaker)

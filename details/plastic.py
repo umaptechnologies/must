@@ -9,7 +9,7 @@ def build_best_guess(taking, returning):
     return new_f
 
 
-class Plastic:
+class Plastic(object):
     ''' WRITEME '''
     def __init__(self, name=None, parent=None):
         self.name = name

@@ -1,7 +1,7 @@
 from must import must_be_natural_number
 
 
-class Legion:
+class Legion(object):
     def __init__(self, warlord, warrior_factory, warrior_count, enemy, output_stream):
         self.warlord = warlord.that_must('give_orders')
         warrior_factory = warrior_factory.that_must_make('warrior', 'enemy').that_must('follow_orders', 'orders')

@@ -1,4 +1,4 @@
-class WarriorBody:
+class WarriorBody(object):
     def __init__(self, weapon):
         self.weapon = weapon.that_must('strike', 'target')
 

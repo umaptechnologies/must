@@ -1,4 +1,4 @@
-class SingingSpear:
+class SingingSpear(object):
     def __init__(self, output_stream):
         self.output_stream = output_stream.that_must('output', 'text')
 

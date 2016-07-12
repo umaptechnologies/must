@@ -2,7 +2,7 @@ from util import must_be_checkable
 from plastic import Plastic
 
 
-class SafeObject:
+class SafeObject(object):
     ''' Never fails a must. '''
     def must(self, action, taking='', returning=''):
         return self

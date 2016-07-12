@@ -32,7 +32,7 @@ def must_handle_synonyms(obj, synonym_dict):
                     setattr(obj, alias, m_val)
 
 
-class ParameterSignature:
+class ParameterSignature(object):
     '''WRITEME'''
     def __init__(self, param_name):
         self.name = param_name
@@ -50,7 +50,7 @@ class ParameterSignature:
         return result
 
 
-class FunctionSignature:
+class FunctionSignature(object):
     '''WRITEME'''
     def __init__(self, f, owner_obj=None, ignore_warnings=False):
         self.function = f
@@ -118,7 +118,7 @@ class FunctionSignature:
         return self.name+"(\n\t"+',\n\t'.join(arg_headers)+"\n) -> "+self._return_str()
 
 
-class ClassPattern:
+class ClassPattern(object):
     ''' WRITEME '''
     def __init__(self, constructor, ignore_warnings=False):
         self._constructor = FunctionSignature(constructor, ignore_warnings=ignore_warnings)

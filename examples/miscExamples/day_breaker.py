@@ -1,7 +1,7 @@
 from must import must_list_objects
 
 
-class DayBreaker:
+class DayBreaker(object):
     '''Breaks items into chunks, based on their day.'''
     def __init__(self):
         pass
