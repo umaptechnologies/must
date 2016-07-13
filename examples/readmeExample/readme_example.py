@@ -19,5 +19,4 @@ def test_legion():
 
 if __name__ == '__main__':
     test_legion()
-    # TODO: print patterns.describe(random.randint)
-    print patterns.describe(Khan)
+    print patterns.describe_all()

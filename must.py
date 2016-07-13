@@ -1,5 +1,4 @@
 import inspect
-import types
 from details.plastic import Plastic
 from details.factories import FactoryPattern
 from details.class_pattern import ClassPattern
@@ -8,6 +7,7 @@ from details.primitive_musts import must_be_string
 from details.primitive_musts import must_be_natural_number
 from details.primitive_musts import must_be_real_number
 from details.primitive_musts import must_list_objects
+from details.standard_patterns import MustOutputToStdOut
 
 must_be_something = Plastic  # This is an alias for importing.
 _ = (
@@ -15,18 +15,16 @@ _ = (
     must_be_natural_number,
     must_be_real_number,
     must_list_objects,
+    MustOutputToStdOut,
 )  # Just to get the linter to shut up
 
 
-class MustOutputToStdOut(object):
-    ''' Wrapper for the "print" statement. '''
-    def __init__(self):
-        pass
-
-    def output(self, text):
-        text = must_be_string(text)
-        self.must_return(None)
-        print text
+def _function_to_class(f):
+    class MustWrap(object):
+        def __init__(self):
+            pass
+    setattr(MustWrap, f.__name__, f)
+    return MustWrap
 
 
 class MustHavePatterns(object):
@@ -36,60 +34,65 @@ class MustHavePatterns(object):
         self._patterns = []
         self.add_all(constructors)
 
-    def add(self, constructor, ignore_warnings=False):
-        self.add_all([constructor], ignore_warnings)
-
-    def add_all(self, constructors, ignore_warnings=False):
-        for c in constructors:
-            if inspect.isclass(c):
-                self._patterns.append(ClassPattern(c, ignore_warnings))
-                self._patterns.append(FactoryPattern(c, ignore_warnings))
-            elif hasattr(c, '__call__'):
-                class MustWrap(object):
-                    def __init__(self):
-                        pass
-                setattr(MustWrap, c.__name__, c)
-                self._patterns.append(ClassPattern(MustWrap, ignore_warnings))
-            else:
-                raise TypeError('Must cannot handle %s because it is of %s.' % (str(c), type(c)))
-
-    def create_with_namehint(self, name_hint, requirements):
-        possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
-        if len(possibilities) is not 1:
-            raise CantFindDependency(name_hint, requirements, possibilities)
-        return possibilities[0].create(self, self._aliases, requirements.known_parameters)
-
-    def create(self, requirements, **kwargs):
-        known_parameters = {}
+    def _collect_known_parameters(self, kwargs):
+        results = {}
         for key in kwargs.keys():
             if key.startswith('with_'):
-                known_parameters[key[5:]] = kwargs.get(key)
+                results[key[5:]] = kwargs.get(key)
             else:
                 raise KeyError('Unknown creation parameter "%s"' % key)
+        return results
 
+    def _get_patterns(self, desired_pattern):
+        if inspect.isclass(desired_pattern):
+            return [p for p in self._patterns if p.reflects_class(desired_pattern)]
+        elif hasattr(desired_pattern, '__call__'):
+            # TODO: This is ugly. Clean it up!
+            name = desired_pattern.__name__
+            args, varargs, keywords, defaults = inspect.getargspec(desired_pattern)
+            if len(args) > 0 and args[0] == 'self':
+                args = args[1:]
+            plastic = Plastic().that_must(name, ', '.join(args))
+            return [p for p in self._patterns if p.matches(plastic, {})]
+        raise Exception("Can't handle patterns of type: %s" % type(desired_pattern))
+
+    def add(self, new_pattern, ignore_warnings=False):
+        self.add_all([new_pattern], ignore_warnings)
+
+    def add_all(self, new_patterns, ignore_warnings=False):
+        for p in new_patterns:
+            if inspect.isclass(p):
+                self._patterns.append(ClassPattern(p, ignore_warnings))
+                self._patterns.append(FactoryPattern(p, ignore_warnings))
+            elif hasattr(p, '__call__'):
+                self._patterns.append(ClassPattern(_function_to_class(p), ignore_warnings))
+            else:
+                raise TypeError('Must cannot handle %s because it is of %s.' % (str(p), type(p)))
+
+    def create_with_namehint(self, name_hint, requirements, **kwargs):
+        known_parameters = self._collect_known_parameters(kwargs)
         if isinstance(requirements, Plastic):
-            # TODO: Meld known_parameters into requirements
-            return self.create_with_namehint('Object created from specification', requirements)
-        elif isinstance(requirements, (types.TypeType, types.ClassType)):
-            for p in self._patterns:
-                if p.reflects_class(requirements):
-                    return p.create(self, self._aliases, known_parameters)
-            raise Exception("Can't find pattern that matches specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
-        raise Exception("Can't create object from unknown specficiation: "+str(requirements)+(" (%s)" % type(requirements)))
+            known_parameters.update(requirements.known_parameters)
+            possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
+        else:
+            possibilities = self._get_patterns(requirements)
+        if len(possibilities) is not 1:
+            raise CantFindDependency(name_hint, requirements, possibilities)
+        return possibilities[0].create(self, self._aliases, known_parameters)
+
+    def create(self, requirements, **kwargs):
+        if isinstance(requirements, Plastic):
+            return self.create_with_namehint('Object created from specification', requirements, **kwargs)
+        return self.create_with_namehint(str(requirements), requirements, **kwargs)
 
     def mock_dependencies(self, desired_pattern, function_name='__init__'):
-        if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
-            for p in self._patterns:
-                if p.reflects_class(desired_pattern):
-                    return p.mock_dependencies(function_name)
-        raise Exception("Unable to mock dependencies for %s.%s" % (str(desired_pattern), function_name))
+        return self._get_patterns(desired_pattern)[0].mock_dependencies(function_name)
 
     def describe(self, desired_pattern):
-        if isinstance(desired_pattern, (types.TypeType, types.ClassType)):
-            for p in self._patterns:
-                if p.reflects_class(desired_pattern):
-                    return p.describe()
-        raise Exception("Unable to describe %s" % str(desired_pattern))
+        return self._get_patterns(desired_pattern)[0].describe()
+
+    def describe_all(self):
+        return ''.join([p.describe() for p in self._patterns if isinstance(p, ClassPattern)])
 
     def alias(self, **aliases):
         for item in aliases.items():

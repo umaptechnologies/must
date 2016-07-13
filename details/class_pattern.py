@@ -86,8 +86,7 @@ class FunctionSignature(object):
                 print ''
         if self.is_method:
             del owner_obj.must_return
-        if self.returns is None:
-            self.has_explicit_return_value = True
+        if self.returns is None and self.has_explicit_return_value:
             self.returns = self.name if inspect.isclass(f) else None
 
     def get_default(self, index):
@@ -120,8 +119,9 @@ class FunctionSignature(object):
 
 class ClassPattern(object):
     ''' WRITEME '''
-    def __init__(self, constructor, ignore_warnings=False):
+    def __init__(self, constructor, is_function_wrapper=False, ignore_warnings=False):
         self._constructor = FunctionSignature(constructor, ignore_warnings=ignore_warnings)
+        self._is_function_wrapper = is_function_wrapper
         self._properties = []
         self._capabilities = {}
 
@@ -139,6 +139,8 @@ class ClassPattern(object):
 
     def describe(self, member_name=None):
         if member_name is None:
+            if self._is_function_wrapper:
+                return '\n'+'\n'.join(map(self.describe, self._capabilities))
             members = self.describe('__init__')+"\n"
             for c in self._capabilities:
                 members += self.describe(c)+"\n"
