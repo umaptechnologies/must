@@ -62,10 +62,10 @@ class MustHavePatterns(object):
     def add_all(self, new_patterns, ignore_warnings=False):
         for p in new_patterns:
             if inspect.isclass(p):
-                self._patterns.append(ClassPattern(p, ignore_warnings))
-                self._patterns.append(FactoryPattern(p, ignore_warnings))
+                self._patterns.append(ClassPattern(p, ignore_warnings=ignore_warnings))
+                self._patterns.append(FactoryPattern(p, ignore_warnings=ignore_warnings))
             elif hasattr(p, '__call__'):
-                self._patterns.append(ClassPattern(_function_to_class(p), ignore_warnings))
+                self._patterns.append(ClassPattern(_function_to_class(p), is_function_wrapper=True, ignore_warnings=ignore_warnings))
             else:
                 raise TypeError('Must cannot handle %s because it is of %s.' % (str(p), type(p)))
 
