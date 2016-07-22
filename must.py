@@ -34,8 +34,10 @@ class MustHavePatterns(object):
         self._patterns = []
         self.add_all(constructors)
 
-    def _collect_known_parameters(self, kwargs):
+    def _collect_known_parameters(self, requirements, kwargs):
         results = {}
+        if isinstance(requirements, Plastic):
+            results.update(requirements.known_parameters)
         for key in kwargs.keys():
             if key.startswith('with_'):
                 results[key[5:]] = kwargs.get(key)
@@ -44,7 +46,9 @@ class MustHavePatterns(object):
         return results
 
     def _get_patterns(self, desired_pattern):
-        if inspect.isclass(desired_pattern):
+        if isinstance(desired_pattern, Plastic):
+            return [p for p in self._patterns if p.matches(desired_pattern, self._aliases)]
+        elif inspect.isclass(desired_pattern):
             return [p for p in self._patterns if p.reflects_class(desired_pattern)]
         elif hasattr(desired_pattern, '__call__'):
             # TODO: This is ugly. Clean it up!
@@ -69,21 +73,16 @@ class MustHavePatterns(object):
             else:
                 raise TypeError('Must cannot handle %s because it is of %s.' % (str(p), type(p)))
 
-    def create_with_namehint(self, name_hint, requirements, **kwargs):
-        known_parameters = self._collect_known_parameters(kwargs)
-        if isinstance(requirements, Plastic):
-            known_parameters.update(requirements.known_parameters)
-            possibilities = filter(lambda x: x.matches(requirements, self._aliases), self._patterns)
-        else:
-            possibilities = self._get_patterns(requirements)
+    def create_with_namehint(self, name_hint, desired_pattern, **kwargs):
+        possibilities = self._get_patterns(desired_pattern)
+        known_parameters = self._collect_known_parameters(desired_pattern, kwargs)
         if len(possibilities) is not 1:
-            raise CantFindDependency(name_hint, requirements, possibilities)
+            raise CantFindDependency(name_hint, desired_pattern, possibilities)
         return possibilities[0].create(self, self._aliases, known_parameters)
 
-    def create(self, requirements, **kwargs):
-        if isinstance(requirements, Plastic):
-            return self.create_with_namehint('Object created from specification', requirements, **kwargs)
-        return self.create_with_namehint(str(requirements), requirements, **kwargs)
+    def create(self, desired_pattern, **kwargs):
+        namehint = 'Object created from specification' if isinstance(desired_pattern, Plastic) else str(desired_pattern)
+        return self.create_with_namehint(namehint, desired_pattern, **kwargs)
 
     def mock_dependencies(self, desired_pattern, function_name='__init__'):
         return self._get_patterns(desired_pattern)[0].mock_dependencies(function_name)
@@ -92,7 +91,16 @@ class MustHavePatterns(object):
         return self._get_patterns(desired_pattern)[0].describe()
 
     def describe_all(self):
-        return ''.join([p.describe() for p in self._patterns if isinstance(p, ClassPattern)])
+        return '\n\n'.join([p.describe() for p in self._patterns if isinstance(p, ClassPattern)])
+
+    def dependencies(self, desired_pattern, **kwargs):
+        known_parameters = self._collect_known_parameters(desired_pattern, kwargs)
+        return self._get_patterns(desired_pattern)[0].dependencies(self, self._aliases, known_parameters)
+
+    def graph(self, **kwargs):
+        known_parameters = self._collect_known_parameters(None, kwargs)
+        mapping = {p._constructor.function: p.dependencies(self, self._aliases, known_parameters) for p in self._patterns if isinstance(p, ClassPattern)}
+        return '\n'.join([a.__name__+": "+str(b) for a,b in mapping.items()])
 
     def alias(self, **aliases):
         for item in aliases.items():

@@ -25,3 +25,4 @@ def test_duck():
 
 if __name__ == "__main__":
     test_duck()
+    print patterns.graph()

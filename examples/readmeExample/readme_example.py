@@ -20,3 +20,4 @@ def test_legion():
 if __name__ == '__main__':
     test_legion()
     print patterns.describe_all()
+    print patterns.graph(with_warrior_count=7, with_enemy="Cousin Steve")

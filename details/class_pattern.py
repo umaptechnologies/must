@@ -141,11 +141,11 @@ class ClassPattern(object):
     def describe(self, member_name=None):
         if member_name is None:
             if self._is_function_wrapper:
-                return '\n'+'\n'.join(map(self.describe, self._capabilities))
+                return '\n'.join(map(self.describe, self._capabilities))
             members = self.describe('__init__')+"\n"
             for c in self._capabilities:
                 members += self.describe(c)+"\n"
-            return ("\n%s:\n\t" % self._constructor.name) + members.replace("\n","\n\t")
+            return (("%s:\n\t" % self._constructor.name) + members.replace("\n","\n\t")).strip()
 
         if member_name == "__init__":
             return str(self._constructor)
@@ -153,12 +153,16 @@ class ClassPattern(object):
             return str(self._capabilities[member_name])
         raise NotImplementedError  # TODO
 
+    def dependencies(self, universe, aliases, known_parameters):
+        params = self._collect_dependencies(universe, aliases, known_parameters)
+        return [x.__class__ for x in params.values()]
+
     def mock_dependencies(self, method_name):
         if method_name == "__init__":
             return self._constructor.mock_params()
         raise NotImplementedError  # TODO
 
-    def create(self, universe, aliases, known_parameters):
+    def _collect_dependencies(self, universe, aliases, known_parameters):
         params = {}
         for i in range(len(self._constructor.args)):
             arg_name = self._constructor.args[i]
@@ -175,6 +179,10 @@ class ClassPattern(object):
                         params[arg_name] = default
                     else:
                         raise ex
+        return params
+
+    def create(self, universe, aliases, known_parameters):
+        params = self._collect_dependencies(universe, aliases, known_parameters)
         result = self._constructor.function(**params)
         must_handle_synonyms(result, aliases)
         must_be_checkable(result)
